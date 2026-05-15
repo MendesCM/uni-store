@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Uni Store - Painel Admin</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root{
+      --bg:#050510;
+      --panel:#101421;
+      --panel2:#171d2d;
+      --line:#2d3548;
+      --text:#fff;
+      --muted:#aeb7cb;
+      --green:#00e676;
+      --blue:#007bff;
+      --orange:#ff6b35;
+      --red:#ff3b3b;
+      --yellow:#ffcc00;
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0;font-family:'Montserrat',sans-serif}
+
+    body{
+      background:#050510 url('fundo_loja.png') center/cover fixed no-repeat;
+      color:var(--text);
+      min-height:100vh;
+      opacity:0;
+      pointer-events:none;
+      transition:.35s;
+    }
+
+    body.autorizado{
+      opacity:1;
+      pointer-events:auto;
+    }
+
+    .wrap{
+      width:min(1180px,94vw);
+      margin:0 auto;
+      padding:28px 0 60px;
+    }
+
+    .top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      flex-wrap:wrap;
+      margin-bottom:26px;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:14px;
+    }
+
+    .brand img{
+      width:58px;
+      height:58px;
+      object-fit:contain;
+      filter:drop-shadow(0 0 14px rgba(0,140,255,.55));
+    }
+
+    h1{
+      font-size:clamp(24px,3vw,38px);
+      font-weight:800;
+      line-height:1.05;
+    }
+
+    .sub{
+      color:var(--muted);
+      margin-top:5px;
+      font-size:13px;
+    }
+
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    button,a.btn{
+      border:0;
+      border-radius:10px;
+      padding:12px 16px;
+      font-weight:800;
+      cursor:pointer;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      transition:.2s;
+      color:#fff;
+    }
+
+    button:hover,a.btn:hover{filter:brightness(1.14);transform:translateY(-1px)}
+
+    .btn-store{background:linear-gradient(135deg,var(--blue),#004bd6)}
+    .btn-new{background:linear-gradient(135deg,var(--green),#009a4f);color:#001b0d}
+    .btn-logout{background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18)}
+    .btn-save{background:linear-gradient(135deg,var(--orange),#b72b00)}
+    .btn-delete{background:linear-gradient(135deg,var(--red),#8d0000)}
+    .btn-small{padding:9px 11px;font-size:12px;border-radius:8px}
+
+    .notice{
+      background:rgba(255,107,53,.13);
+      border:1px solid rgba(255,107,53,.55);
+      padding:13px 16px;
+      border-radius:12px;
+      color:#fff;
+      font-size:14px;
+      margin-bottom:18px;
+      box-shadow:0 0 24px rgba(255,107,53,.12);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:18px;
+    }
+
+    .card{
+      background:linear-gradient(180deg,rgba(23,29,45,.94),rgba(10,14,24,.94));
+      border:1px solid rgba(255,255,255,.13);
+      border-radius:18px;
+      padding:18px;
+      box-shadow:0 12px 32px rgba(0,0,0,.42);
+    }
+
+    .game-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:16px;
+      border-bottom:1px solid rgba(255,255,255,.1);
+      padding-bottom:14px;
+    }
+
+    .game-title-line{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .badge{
+      padding:5px 9px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.6px;
+    }
+
+    .available{background:rgba(0,230,118,.18);color:#76ffb2;border:1px solid rgba(0,230,118,.5)}
+    .maintenance{background:rgba(255,204,0,.16);color:#ffe27a;border:1px solid rgba(255,204,0,.55)}
+    .coming_soon{background:rgba(180,190,210,.16);color:#dbe3f4;border:1px solid rgba(180,190,210,.38)}
+    .hidden{background:rgba(255,59,59,.16);color:#ff9b9b;border:1px solid rgba(255,59,59,.5)}
+    .new{background:rgba(255,107,53,.18);color:#ffb199;border:1px solid rgba(255,107,53,.55)}
+
+    .form{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:14px;
+    }
+
+    .field.full{grid-column:1/-1}
+
+    label{
+      display:block;
+      color:#d8def0;
+      font-size:12px;
+      font-weight:800;
+      margin-bottom:6px;
+      letter-spacing:.5px;
+      text-transform:uppercase;
+    }
+
+    input,select,textarea{
+      width:100%;
+      background:#070b14;
+      color:#fff;
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:12px;
+      outline:none;
+      font-size:14px;
+    }
+
+    textarea{min-height:86px;resize:vertical}
+
+    input:focus,select:focus,textarea:focus{
+      border-color:var(--orange);
+      box-shadow:0 0 0 3px rgba(255,107,53,.14);
+    }
+
+    .checkline{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-height:44px;
+    }
+
+    .checkline input{width:18px;height:18px}
+
+    .card-actions{
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:16px;
+    }
+
+    .loading,.empty,.error{
+      background:rgba(10,14,24,.88);
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:18px;
+      padding:24px;
+      text-align:center;
+      color:#d8def0;
+    }
+
+    .error{
+      border-color:rgba(255,59,59,.55);
+      color:#ffc1c1;
+    }
+
+    .toast{
+      position:fixed;
+      right:18px;
+      bottom:18px;
+      background:#111827;
+      border:1px solid rgba(255,255,255,.15);
+      color:#fff;
+      padding:14px 16px;
+      border-radius:12px;
+      box-shadow:0 10px 34px rgba(0,0,0,.45);
+      display:none;
+      max-width:min(420px,92vw);
+      z-index:99;
+      font-weight:700;
+    }
+
+    .toast.show{display:block}
+    .toast.ok{border-color:rgba(0,230,118,.55)}
+    .toast.err{border-color:rgba(255,59,59,.55)}
+
+    @media(max-width:760px){
+      .form{grid-template-columns:1fr}
+      .top{align-items:flex-start}
+      .actions{width:100%}
+      .actions a,.actions button{flex:1}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <img src="logo2.png" alt="Uni Store">
+        <div>
+          <h1>Painel Admin</h1>
+          <div class="sub" id="adminInfo">Verificando administrador...</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <a class="btn btn-store" href="index.html">⬅ Voltar para Loja</a>
+        <button class="btn-new" onclick="novoJogo()">➕ Novo Jogo</button>
+        <button class="btn-logout" onclick="fazerLogout()">Sair</button>
+      </div>
+    </div>
+
+    <div class="notice">
+      🛠 Aqui você controla os jogos da Uni Store. 
+      <strong>Disponível</strong> libera para todos, 
+      <strong>Manutenção</strong> libera só para admin, 
+      <strong>Em breve</strong> bloqueia, 
+      <strong>Oculto</strong> remove da loja para usuários comuns.
+    </div>
+
+    <div id="gamesList" class="grid">
+      <div class="loading">Carregando jogos...</div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://oqbnooksttpycuixxciv.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_vrLE53cxmdwVvFlamnv_xg_Ff2tuUya';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let usuarioAtual = null;
+let adminAtual = false;
+let jogosAtuais = [];
+
+function toast(msg, tipo='ok'){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + (tipo === 'err' ? 'err' : 'ok');
+  setTimeout(() => el.className = 'toast', 3500);
+}
+
+function salvarSessao(session){
+  if(!session) return;
+  localStorage.setItem('uni_session', JSON.stringify(session));
+  localStorage.setItem('uni_user', JSON.stringify(session.user));
+  localStorage.setItem('fogwar_session', JSON.stringify(session));
+  localStorage.setItem('fogwar_user', JSON.stringify(session.user));
+}
+
+async function verificarAdmin(email){
+  if(!email) return false;
+
+  const { data, error } = await sb
+    .from('uni_admins')
+    .select('email')
+    .eq('email', String(email).trim().toLowerCase())
+    .maybeSingle();
+
+  if(error){
+    console.error(error);
+    return false;
+  }
+
+  return !!data;
+}
+
+async function protegerAdmin(){
+  const { data, error } = await sb.auth.getSession();
+
+  if(error || !data.session){
+    window.location.replace('login.html');
+    return;
+  }
+
+  salvarSessao(data.session);
+  usuarioAtual = data.session.user;
+  adminAtual = await verificarAdmin(usuarioAtual.email);
+
+  if(!adminAtual){
+    alert('Acesso negado. Apenas administradores podem acessar este painel.');
+    window.location.replace('index.html');
+    return;
+  }
+
+  localStorage.setItem('uni_is_admin', 'true');
+  localStorage.setItem('fogwar_is_admin', 'true');
+
+  document.getElementById('adminInfo').textContent = 'Logado como admin: ' + usuarioAtual.email;
+  document.body.classList.add('autorizado');
+
+  await carregarJogos();
+}
+
+protegerAdmin();
+
+async function fazerLogout(){
+  localStorage.removeItem('uni_session');
+  localStorage.removeItem('uni_user');
+  localStorage.removeItem('uni_is_admin');
+  localStorage.removeItem('fogwar_session');
+  localStorage.removeItem('fogwar_user');
+  localStorage.removeItem('fogwar_is_admin');
+  await sb.auth.signOut();
+  window.location.replace('login.html');
+}
+
+function escapeHtml(texto){
+  return String(texto ?? '')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'",'&#039;');
+}
+
+function statusLabel(status){
+  return {
+    available:'Disponível',
+    maintenance:'Manutenção',
+    coming_soon:'Em breve',
+    hidden:'Oculto'
+  }[status] || 'Manutenção';
+}
+
+function normalizarStatus(status){
+  const s = String(status || 'maintenance').trim().toLowerCase();
+  return ['available','maintenance','coming_soon','hidden'].includes(s) ? s : 'maintenance';
+}
+
+function valor(id){
+  return document.getElementById(id)?.value ?? '';
+}
+
+function checked(id){
+  return !!document.getElementById(id)?.checked;
+}
+
+async function carregarJogos(){
+  const list = document.getElementById('gamesList');
+  list.innerHTML = '<div class="loading">Carregando jogos...</div>';
+
+  const { data, error } = await sb
+    .from('uni_games')
+    .select('*')
+    .order('sort_order', { ascending:true });
+
+  if(error){
+    console.error(error);
+    list.innerHTML = '<div class="error">Erro ao carregar jogos. Confira a tabela uni_games e as policies.</div>';
+    return;
+  }
+
+  jogosAtuais = data || [];
+
+  if(!jogosAtuais.length){
+    list.innerHTML = '<div class="empty">Nenhum jogo cadastrado ainda.</div>';
+    return;
+  }
+
+  list.innerHTML = jogosAtuais.map(renderJogo).join('');
+}
+
+function renderJogo(jogo){
+  const id = jogo.id;
+  const status = normalizarStatus(jogo.status);
+  const isNew = !!jogo.is_new;
+
+  return `
+    <div class="card" data-id="${escapeHtml(id)}">
+      <div class="game-head">
+        <div class="game-title-line">
+          <h2>${escapeHtml(jogo.title || 'Sem título')}</h2>
+          <span class="badge ${status}">${statusLabel(status)}</span>
+          ${isNew ? '<span class="badge new">NOVO</span>' : ''}
+        </div>
+
+        <div>
+          <button class="btn-save btn-small" onclick="salvarJogo('${escapeHtml(id)}')">Salvar</button>
+          <button class="btn-delete btn-small" onclick="deletarJogo('${escapeHtml(id)}')">Excluir</button>
+        </div>
+      </div>
+
+      <div class="form">
+        <div class="field">
+          <label>Slug</label>
+          <input id="slug_${id}" value="${escapeHtml(jogo.slug || '')}" placeholder="ex: fog-war">
+        </div>
+
+        <div class="field">
+          <label>Título</label>
+          <input id="title_${id}" value="${escapeHtml(jogo.title || '')}" placeholder="Nome do jogo">
+        </div>
+
+        <div class="field full">
+          <label>Descrição</label>
+          <textarea id="description_${id}" placeholder="Descrição curta do jogo">${escapeHtml(jogo.description || '')}</textarea>
+        </div>
+
+        <div class="field">
+          <label>Imagem</label>
+          <input id="image_url_${id}" value="${escapeHtml(jogo.image_url || '')}" placeholder="ex: bg-fogwar.jpg">
+        </div>
+
+        <div class="field">
+          <label>URL do jogo</label>
+          <input id="game_url_${id}" value="${escapeHtml(jogo.game_url || '')}" placeholder="ex: games/fogwar/index.html">
+        </div>
+
+        <div class="field">
+          <label>Status</label>
+          <select id="status_${id}">
+            <option value="available" ${status==='available'?'selected':''}>Disponível para todos</option>
+            <option value="maintenance" ${status==='maintenance'?'selected':''}>Manutenção - só admin</option>
+            <option value="coming_soon" ${status==='coming_soon'?'selected':''}>Em breve</option>
+            <option value="hidden" ${status==='hidden'?'selected':''}>Oculto</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Ordem</label>
+          <input id="sort_order_${id}" type="number" value="${Number(jogo.sort_order || 0)}">
+        </div>
+
+        <div class="field checkline">
+          <input id="is_new_${id}" type="checkbox" ${isNew?'checked':''}>
+          <label for="is_new_${id}" style="margin:0">Marcar como NOVO</label>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function salvarJogo(id){
+  const payload = {
+    slug: valor('slug_' + id).trim(),
+    title: valor('title_' + id).trim(),
+    description: valor('description_' + id).trim(),
+    image_url: valor('image_url_' + id).trim(),
+    game_url: valor('game_url_' + id).trim(),
+    status: normalizarStatus(valor('status_' + id)),
+    is_new: checked('is_new_' + id),
+    sort_order: Number(valor('sort_order_' + id) || 0),
+    updated_at: new Date().toISOString()
+  };
+
+  if(!payload.slug || !payload.title){
+    toast('Slug e título são obrigatórios.', 'err');
+    return;
+  }
+
+  const { error } = await sb
+    .from('uni_games')
+    .update(payload)
+    .eq('id', id);
+
+  if(error){
+    console.error(error);
+    toast('Erro ao salvar: ' + error.message, 'err');
+    return;
+  }
+
+  toast('Jogo salvo com sucesso.');
+  await carregarJogos();
+}
+
+async function deletarJogo(id){
+  const jogo = jogosAtuais.find(j => j.id === id);
+  const nome = jogo?.title || 'este jogo';
+
+  if(!confirm('Tem certeza que deseja excluir "' + nome + '"?')) return;
+
+  const { error } = await sb
+    .from('uni_games')
+    .delete()
+    .eq('id', id);
+
+  if(error){
+    console.error(error);
+    toast('Erro ao excluir: ' + error.message, 'err');
+    return;
+  }
+
+  toast('Jogo excluído.');
+  await carregarJogos();
+}
+
+async function novoJogo(){
+  const slugBase = prompt('Slug do novo jogo. Exemplo: projeto-novo');
+  if(!slugBase) return;
+
+  const slug = slugBase.trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  if(!slug){
+    toast('Slug inválido.', 'err');
+    return;
+  }
+
+  const novo = {
+    slug,
+    title: 'Novo Jogo',
+    description: 'Descrição do novo jogo.',
+    image_url: 'fundo_loja.png',
+    game_url: '#',
+    status: 'maintenance',
+    is_new: false,
+    sort_order: (jogosAtuais.length + 1) * 10
+  };
+
+  const { error } = await sb
+    .from('uni_games')
+    .insert(novo);
+
+  if(error){
+    console.error(error);
+    toast('Erro ao criar jogo: ' + error.message, 'err');
+    return;
+  }
+
+  toast('Novo jogo criado em manutenção.');
+  await carregarJogos();
+}
+</script>
+</body>
+</html>
