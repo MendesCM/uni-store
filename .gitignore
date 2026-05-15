@@ -1,1 +1,6 @@
-.vercel
+node_modules/
+android/
+package-lock.json
+.DS_Store
+.vscode/
+*.log
