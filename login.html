@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uni Store - Acesso</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    
+    <!-- Fontes da Loja -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Conecta a loja ao seu banco Supabase do KABOOM -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        :root {
+            --bg-dark: #050510;
+            --neon-blue: #00d2ff;
+            --neon-purple: #9d00ff;
+            --btn-green: #00e676;
+            --text-light: #ffffff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        /* Fundo principal idêntico ao da loja */
+        body {
+            background-color: var(--bg-dark);
+            background-image: linear-gradient(rgba(5, 5, 16, 0.7), rgba(5, 5, 16, 0.8)), url('fundo_loja.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            color: var(--text-light);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* ============== LOGO FLUTUANTE ============== */
+        .hero {
+            text-align: center;
+            padding: 40px 20px 20px;
+            z-index: 5;
+        }
+        .logo-img {
+            width: min(350px, 80vw);
+            filter: drop-shadow(0 0 20px rgba(0, 150, 255, 0.6));
+            animation: float 4s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* ============== ESTRUTURA DA VITRINE E LOGIN ============== */
+        .showcase-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 50px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            flex: 1;
+        }
+
+        /* ============== CAIXA DE LOGIN ============== */
+        .caixa-login {
+            background-color: rgba(30, 33, 54, 0.85); /* Fundo semi-transparente */
+            backdrop-filter: blur(12px); /* Efeito de vidro */
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            border-top: 4px solid var(--btn-green);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            z-index: 10;
+        }
+
+        .caixa-login h2 { 
+            margin-bottom: 20px; 
+            color: var(--btn-green); 
+            letter-spacing: 1px; 
+            font-weight: 800;
+        }
+        
+        input {
+            width: 100%;
+            padding: 14px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            font-size: 15px;
+            outline: none;
+            transition: border 0.3s;
+        }
+        input:focus { border-color: var(--btn-green); }
+
+        /* Sistema do Olhinho */
+        .input-wrapper {
+            position: relative;
+            margin: 8px 0;
+            width: 100%;
+        }
+        .input-wrapper input {
+            margin: 0; 
+            padding-right: 45px; 
+        }
+        .eye-icon {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 20px;
+            user-select: none;
+            opacity: 0.5;
+            transition: 0.2s;
+        }
+        .eye-icon:hover { opacity: 1; }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--btn-green);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: 0.3s transform, 0.3s background-color, 0.3s box-shadow;
+            box-shadow: 0 4px 15px rgba(0, 230, 118, 0.3);
+        }
+        .btn:hover { 
+            background-color: #00c853; 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 230, 118, 0.5);
+        }
+        .btn:active { transform: translateY(0); }
+        
+        .esconder { display: none !important; }
+        
+        .texto-troca {
+            margin-top: 25px;
+            font-size: 0.9em;
+            color: #d0d5e5;
+            cursor: pointer;
+            transition: color 0.2s;
+            font-weight: 600;
+        }
+        .texto-troca:hover { color: var(--btn-green); text-decoration: underline; }
+        
+        .mensagem {
+            margin-top: 15px;
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #ffcb05; /* Amarelo Kaboom */
+        }
+
+        /* ============== CARTÕES LATERAIS (VITRINE) ============== */
+        .side-game {
+            display: block;
+        }
+
+        .game-card {
+            border-radius: 20px;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            height: 340px; /* Um pouco menor para dar destaque ao login */
+            width: 260px;
+            border: 2px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            /* O SEGREDOS AQUI: Transformamos em vitrine in-clicável */
+            pointer-events: none; 
+            opacity: 0.75; 
+            transform: scale(0.95);
+        }
+
+        .card-bg {
+            position: absolute; 
+            inset: 0; 
+            z-index: -1; 
+            background-size: cover !important;
+            background-position: center !important;
+        }
+        .bg-kaboom { 
+            background: linear-gradient(to bottom, rgba(5,5,15,0.2) 0%, rgba(5,5,15,0.95) 100%), url('bg-kaboom.jpg'); 
+        }
+        .bg-kiran { 
+            background: linear-gradient(to bottom, rgba(5,5,15,0.2) 0%, rgba(5,5,15,0.95) 100%), url('bg-kiran.jpg'); 
+        }
+
+        .card-icon { font-size: 28px; margin-bottom: auto; }
+        .game-title {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            text-align: center;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+        }
+        .game-desc {
+            font-size: 13px;
+            color: var(--text-light);
+            text-align: center;
+            margin-bottom: 10px;
+            line-height: 1.5;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+        }
+        .demo-tag {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 10px;
+            border: 1px dashed rgba(255,255,255,0.4);
+        }
+
+        /* Se a tela for de celular, esconde a vitrine lateral */
+        @media (max-width: 950px) {
+            .side-game { display: none; }
+            .showcase-container { padding: 10px; }
+            .caixa-login { margin-top: -20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Logo da Loja -->
+    <header class="hero">
+        <img src="logo2.png" alt="Uni Store Logo" class="logo-img">
+    </header>
+
+    <!-- Estrutura Principal -->
+    <div class="showcase-container">
+        
+        <!-- Vitrine Esquerda: KABOOM -->
+        <div class="side-game">
+            <div class="game-card">
+                <div class="card-bg bg-kaboom"></div>
+                <div class="card-icon">👑</div>
+                <h3 class="game-title">KABOOM 💣</h3>
+                <p class="game-desc">Ação explosiva e multiplayer insano!</p>
+                <div class="demo-tag">Demonstração</div>
+            </div>
+        </div>
+
+        <!-- Centro: Caixa de Login -->
+        <div class="caixa-login">
+            <h2 id="tituloForm">Acessar Conta</h2>
+            
+            <input type="email" id="email" placeholder="Seu E-mail" required>
+            
+            <!-- Wrapper da Senha Principal -->
+            <div class="input-wrapper">
+                <input type="password" id="senha" placeholder="Sua Senha" required>
+                <span class="eye-icon" onclick="toggleSenha('senha', this)">👁️</span>
+            </div>
+            
+            <!-- Wrapper da Confirmação de Senha (só aparece no cadastro) -->
+            <div class="input-wrapper esconder" id="wrapperConfirmaSenha">
+                <input type="password" id="confirmaSenha" placeholder="Confirme sua Senha">
+                <span class="eye-icon" onclick="toggleSenha('confirmaSenha', this)">👁️</span>
+            </div>
+            
+            <button class="btn" id="btnAcao" onclick="executarAcao()">Entrar na Loja</button>
+            
+            <div id="msgAviso" class="mensagem"></div>
+
+            <div class="texto-troca" onclick="trocarModo()" id="textoTroca">
+                Novo por aqui? Cadastre-se grátis.
+            </div>
+        </div>
+
+        <!-- Vitrine Direita: KIRAN -->
+        <div class="side-game">
+            <div class="game-card">
+                <div class="card-bg bg-kiran"></div>
+                <div class="card-icon">⭐</div>
+                <h3 class="game-title">Projeto Kiran ⚡</h3>
+                <p class="game-desc">Domine o poder dos raios nesta aventura.</p>
+                <div class="demo-tag">Em Breve</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Chaves do Supabase
+        const SUPABASE_URL = 'https://oqbnooksttpycuixxciv.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_vrLE53cxmdwVvFlamnv_xg_Ff2tuUya';
+        
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function salvarSessaoUniStore(session) {
+            if (!session) return;
+
+            localStorage.setItem('uni_session', JSON.stringify(session));
+            localStorage.setItem('uni_user', JSON.stringify(session.user));
+
+            // Nomes alternativos para compatibilidade com os jogos.
+            localStorage.setItem('fogwar_session', JSON.stringify(session));
+            localStorage.setItem('fogwar_user', JSON.stringify(session.user));
+        }
+
+        sb.auth.onAuthStateChange((_event, session) => {
+            if (session) salvarSessaoUniStore(session);
+        });
+
+        let modoCadastro = false; 
+
+        // Função do Olhinho da Senha
+        function toggleSenha(inputId, icon) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.textContent = '🙈'; 
+            } else {
+                input.type = 'password';
+                icon.textContent = '👁️'; 
+            }
+        }
+
+        // Alternar entre Login e Cadastro
+        function trocarModo() {
+            modoCadastro = !modoCadastro;
+            const wrapperConfirma = document.getElementById('wrapperConfirmaSenha');
+            const tituloForm = document.getElementById('tituloForm');
+            const btnAcao = document.getElementById('btnAcao');
+            const textoTroca = document.getElementById('textoTroca');
+            const msgAviso = document.getElementById('msgAviso');
+
+            msgAviso.innerHTML = ""; 
+
+            if (modoCadastro) {
+                wrapperConfirma.classList.remove('esconder');
+                tituloForm.innerHTML = "Criar Conta";
+                btnAcao.innerHTML = "Cadastrar";
+                textoTroca.innerHTML = "Já tem conta? Entre aqui.";
+            } else {
+                wrapperConfirma.classList.add('esconder');
+                tituloForm.innerHTML = "Acessar Conta";
+                btnAcao.innerHTML = "Entrar na Loja";
+                textoTroca.innerHTML = "Novo por aqui? Cadastre-se grátis.";
+            }
+        }
+
+        // Lógica de Autenticação (Com Dupla Checagem de E-mail)
+        async function executarAcao() {
+            const email = document.getElementById('email').value.trim();
+            const senha = document.getElementById('senha').value;
+            const confirmaSenha = document.getElementById('confirmaSenha').value;
+            const msgAviso = document.getElementById('msgAviso');
+
+            if (!email || !senha) {
+                msgAviso.innerHTML = "Preencha o e-mail e a senha!";
+                return;
+            }
+
+            msgAviso.innerHTML = "Aguarde...";
+
+            if (modoCadastro) {
+                if (senha !== confirmaSenha) {
+                    msgAviso.innerHTML = "As senhas não são iguais!";
+                    return;
+                }
+                if (senha.length < 6) {
+                    msgAviso.innerHTML = "A senha deve ter pelo menos 6 caracteres.";
+                    return;
+                }
+
+                // Criação de Conta
+                const { data, error } = await sb.auth.signUp({
+                    email: email,
+                    password: senha,
+                });
+
+                if (error) {
+                    msgAviso.innerHTML = "Erro: " + error.message;
+                } else {
+                    // O SEGREDO DE SEGURANÇA: Verifica se a conta realmente é nova
+                    if (data.user && data.user.identities && data.user.identities.length === 0) {
+                        msgAviso.innerHTML = "⚠️ Este e-mail já está cadastrado! Clique abaixo para entrar.";
+                    } else {
+                        msgAviso.innerHTML = "✅ Sucesso! Um e-mail de confirmação foi enviado. Verifique sua caixa de entrada.";
+                    }
+                }
+
+            } else {
+                // Login
+                const { data, error } = await sb.auth.signInWithPassword({
+                    email: email,
+                    password: senha,
+                });
+
+                if (error) {
+                    msgAviso.innerHTML = "❌ Erro ao entrar: E-mail ou senha incorretos.";
+                } else {
+                    salvarSessaoUniStore(data.session);
+                    msgAviso.innerHTML = "✅ Acesso liberado! Preparando seus jogos...";
+                    setTimeout(() => {
+                        window.location.href = "index.html"; 
+                    }, 800);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

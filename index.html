@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uni Store - Jogos, Diversão, Aventuras</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        :root {
+            --bg-dark: #050510;
+            --neon-blue: #00d2ff;
+            --neon-purple: #9d00ff;
+            --neon-ocean: #00d4ff;
+            --neon-orange: #ff6b35;
+            --btn-green: #00e676;
+            --btn-blue: #007bff;
+            --text-light: #ffffff;
+            --text-muted: #d0d5e5;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        body {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+            background-color: var(--bg-dark);
+            background-image: url('fundo_loja.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            color: var(--text-light);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        body.autorizado {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 12px;
+            padding: 20px 40px;
+            position: relative;
+            z-index: 10;
+            flex-wrap: wrap;
+        }
+
+        .btn-logout,
+        .btn-download-store {
+            color: var(--text-light);
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 9px 22px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px; /* Aumentei levemente o espaço do ícone */
+        }
+
+        .btn-logout {
+            background: rgba(0,0,0,0.5);
+        }
+
+        .btn-download-store {
+            background: linear-gradient(135deg, var(--btn-blue), #0057d9);
+            box-shadow: 0 4px 18px rgba(0,123,255,0.35);
+        }
+
+        .btn-logout:hover,
+        .btn-download-store:hover {
+            border-color: var(--text-light);
+            filter: brightness(1.15);
+            transform: translateY(-2px);
+        }
+
+        .hero {
+            text-align: center;
+            padding: 10px 20px 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 5;
+        }
+
+        .logo-img {
+            width: min(450px, 90vw); 
+            margin-bottom: 10px;
+            filter: drop-shadow(0 0 20px rgba(0, 150, 255, 0.6));
+            animation: float 4s ease-in-out infinite;
+        }
+
+        .store-title-img {
+            width: min(500px, 90vw);
+            margin-bottom: 10px;
+            filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.8));
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .showcase-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            flex: 1;
+            flex-wrap: wrap;
+        }
+
+        .game-card {
+            border-radius: 20px;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            height: 420px;
+            width: min(100%, 320px);
+            border: 2px solid rgba(255,255,255,0.15);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        .game-card:hover { transform: translateY(-8px); }
+
+        .card-kaboom:hover {
+            border-color: var(--neon-blue);
+            box-shadow: 0 15px 40px rgba(0, 210, 255, 0.3);
+        }
+
+        .card-kiran:hover {
+            border-color: var(--neon-purple);
+            box-shadow: 0 15px 40px rgba(157, 0, 255, 0.3);
+        }
+        
+        .card-naval:hover {
+            border-color: var(--neon-ocean);
+            box-shadow: 0 15px 40px rgba(0, 212, 255, 0.3);
+        }
+
+        .card-fogwar:hover {
+            border-color: var(--neon-orange);
+            box-shadow: 0 15px 40px rgba(255, 107, 53, 0.4);
+        }
+
+        .card-bg {
+            position: absolute; 
+            inset: 0; 
+            z-index: -1; 
+            background-size: cover !important;
+            background-position: center !important;
+            transition: transform 0.5s ease;
+        }
+
+        .bg-kaboom {
+            background: linear-gradient(to bottom, rgba(5,5,15,0.1) 0%, rgba(5,5,15,0.95) 100%), url('bg-kaboom.jpg');
+        }
+
+        .bg-kiran {
+            background: linear-gradient(to bottom, rgba(5,5,15,0.1) 0%, rgba(5,5,15,0.95) 100%), url('bg-kiran.jpg');
+        }
+
+        .bg-naval {
+            background: linear-gradient(to bottom, rgba(5,5,15,0.1) 0%, rgba(5,5,15,0.95) 100%), url('BT.png');
+        }
+
+        .bg-fogwar {
+            background: linear-gradient(to bottom, rgba(5,5,15,0.1) 0%, rgba(5,5,15,0.95) 100%), url('bg-fogwar.jpg');
+        }
+
+        .game-card:hover .card-bg { transform: scale(1.08); }
+
+        .card-icon {
+            font-size: 28px;
+            margin-bottom: auto;
+        }
+
+        .game-title {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            text-align: center;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+        }
+
+        .game-desc {
+            font-size: 14px;
+            color: var(--text-light);
+            text-align: center;
+            margin-bottom: 25px;
+            line-height: 1.5;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+        }
+
+        .btn-game {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            margin-top: auto;
+            transition: filter 0.2s, transform 0.1s;
+            text-shadow: none;
+        }
+
+        .btn-game:active { transform: scale(0.98); }
+        .btn-game:hover { filter: brightness(1.15); }
+
+        .btn-play {
+            background: var(--btn-green);
+            color: #000;
+            box-shadow: 0 4px 15px rgba(0, 230, 118, 0.4);
+        }
+
+        .btn-play-fogwar {
+            background: var(--neon-orange);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+        }
+
+        .btn-disabled {
+            background: rgba(255,255,255,0.15);
+            color: #ccc;
+            cursor: not-allowed;
+            margin-top: auto;
+            backdrop-filter: blur(5px);
+        }
+
+        .btn-disabled:hover {
+            filter: none;
+            transform: none;
+        }
+
+        .tag-novo {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            background: var(--neon-orange);
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-shadow: none;
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.5);
+            z-index: 2;
+            animation: pulseNovo 1.8s ease-in-out infinite;
+        }
+
+        @keyframes pulseNovo {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+
+        /* AJUSTES MOBILE EXATOS COMO NA FOTO */
+        @media (max-width: 700px) {
+            .top-bar {
+                flex-direction: column;
+                align-items: flex-end; /* Joga os itens para a direita */
+                padding: 15px 20px;
+                gap: 15px; /* Espaço entre o botão sair e baixar */
+            }
+
+            .btn-logout {
+                width: auto; /* Deixa o botão pequeno, só do tamanho do texto */
+                order: -1; /* Joga o botão sair para cima */
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+
+            .btn-download-store {
+                width: 100%; /* Botão baixar app ocupando a tela toda */
+                order: 2; /* Fica embaixo */
+                padding: 14px;
+            }
+
+            .hero {
+                padding-top: 0;
+            }
+
+            .showcase-container {
+                gap: 22px;
+                padding: 16px;
+            }
+
+            .game-card {
+                height: 380px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <script>
+        const SUPABASE_URL = 'https://oqbnooksttpycuixxciv.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_vrLE53cxmdwVvFlamnv_xg_Ff2tuUya';
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function salvarSessaoUniStore(session) {
+            if (!session) return;
+
+            localStorage.setItem('uni_session', JSON.stringify(session));
+            localStorage.setItem('uni_user', JSON.stringify(session.user));
+
+            // Nomes alternativos para compatibilidade com os jogos.
+            localStorage.setItem('fogwar_session', JSON.stringify(session));
+            localStorage.setItem('fogwar_user', JSON.stringify(session.user));
+        }
+
+        async function blindagemLoja() {
+            const { data, error } = await sb.auth.getSession();
+            
+            if (error || !data.session) {
+                window.location.replace('login.html'); 
+            } else {
+                salvarSessaoUniStore(data.session);
+                document.body.classList.add('autorizado');
+            }
+        }
+
+        blindagemLoja();
+
+        sb.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                salvarSessaoUniStore(session);
+            }
+
+            if (event === 'SIGNED_OUT' || !session) {
+                localStorage.removeItem('uni_session');
+                localStorage.removeItem('uni_user');
+                localStorage.removeItem('fogwar_session');
+                localStorage.removeItem('fogwar_user');
+                window.location.replace('login.html');
+            }
+        });
+
+        async function fazerLogout() {
+            localStorage.removeItem('uni_session');
+            localStorage.removeItem('uni_user');
+            localStorage.removeItem('fogwar_session');
+            localStorage.removeItem('fogwar_user');
+            await sb.auth.signOut();
+        }
+    </script>
+
+    <div class="top-bar">
+        <a href="downloads/Uni Store.apk" download class="btn-download-store">
+            📱 Baixar App Uni Store
+        </a>
+
+        <button class="btn-logout" onclick="fazerLogout()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            Sair
+        </button>
+    </div>
+
+    <header class="hero">
+        <img src="logo2.png" alt="Uni Store Logo" class="logo-img">
+        <img src="titulo.png" alt="Uni Store" class="store-title-img">
+    </header>
+
+    <div class="showcase-container">
+        
+        <div class="game-card card-kaboom">
+            <div class="card-bg bg-kaboom"></div>
+            <div class="card-icon">👑</div>
+            
+            <h3 class="game-title">KABOOM 💣</h3>
+            <p class="game-desc">Ação explosiva. Desvie e sobreviva!</p>
+            
+            <a href="games/kaboom/index.html" class="btn-game btn-play" id="btn-play-kaboom">
+                ▶ Jogar
+            </a>
+        </div>
+
+        <div class="game-card card-fogwar">
+            <span class="tag-novo">NOVO</span>
+            <div class="card-bg bg-fogwar"></div>
+            <div class="card-icon">🎯</div>
+            
+            <h3 class="game-title">FOG WAR 🌫️</h3>
+            <p class="game-desc">Arena tática top-down. Quebre paredes, cace inimigos na névoa.</p>
+            
+            <a href="games/fogwar/index.html" class="btn-game btn-play-fogwar" style="text-decoration: none;">
+                ▶ Jogar
+            </a>
+        </div>
+
+        <div class="game-card card-kiran">
+            <div class="card-bg bg-kiran"></div>
+            <div class="card-icon">⭐</div>
+            
+            <h3 class="game-title">Projeto Kiran ⚡</h3>
+            <p class="game-desc">Em desenvolvimento. Prepare-se para o raio animado.</p>
+            
+            <button class="btn-game btn-disabled">
+                Em Breve
+            </button>
+        </div>
+
+        <div class="game-card card-naval">
+            <div class="card-bg bg-naval"></div>
+            <div class="card-icon">🚢</div>
+            
+            <h3 class="game-title">Batalha Naval ⚓</h3>
+            <p class="game-desc">Estratégia e combate em alto mar. Afunde a frota inimiga!</p>
+            
+            <button class="btn-game btn-disabled">
+                Em Breve
+            </button>
+        </div>
+
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const isCapacitorApp =
+        typeof window.Capacitor !== 'undefined';
+
+    if (isCapacitorApp) {
+        const btnDownload = document.querySelector('.btn-download-store');
+
+        if (btnDownload) {
+            btnDownload.style.display = 'none';
+        }
+    }
+
+});
+</script>
+</body>
+</html>
