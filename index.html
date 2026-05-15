@@ -515,9 +515,9 @@
             await sb.auth.signOut();
         }
 
-        function abrirAdminPanel() {
-            alert('Painel Admin entra na próxima fase. Por enquanto os jogos já vêm da tabela uni_games.');
-        }
+function abrirAdminPanel() {
+    window.location.href = 'admin.html';
+}
 
         function normalizarStatus(status) {
             const valor = String(status || 'maintenance').trim().toLowerCase();
