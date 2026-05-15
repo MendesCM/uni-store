@@ -23,6 +23,8 @@
             --btn-blue: #007bff;
             --text-light: #ffffff;
             --text-muted: #d0d5e5;
+            --danger: #ff3b3b;
+            --warning: #ffcc00;
         }
 
         * {
@@ -66,7 +68,8 @@
         }
 
         .btn-logout,
-        .btn-download-store {
+        .btn-download-store,
+        .btn-admin-panel {
             color: var(--text-light);
             border: 1px solid rgba(255,255,255,0.3);
             padding: 9px 22px;
@@ -92,8 +95,19 @@
             box-shadow: 0 4px 18px rgba(0,123,255,0.35);
         }
 
+        .btn-admin-panel {
+            display: none;
+            background: linear-gradient(135deg, var(--neon-orange), #b72b00);
+            box-shadow: 0 4px 18px rgba(255,107,53,0.35);
+        }
+
+        .btn-admin-panel.visivel {
+            display: inline-flex;
+        }
+
         .btn-logout:hover,
-        .btn-download-store:hover {
+        .btn-download-store:hover,
+        .btn-admin-panel:hover {
             border-color: var(--text-light);
             filter: brightness(1.15);
             transform: translateY(-2px);
@@ -122,6 +136,25 @@
             filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.8));
         }
 
+        .admin-alert {
+            display: none;
+            width: min(760px, 92vw);
+            margin: -15px auto 20px;
+            padding: 12px 18px;
+            border-radius: 12px;
+            background: rgba(255, 107, 53, 0.15);
+            border: 1px solid rgba(255, 107, 53, 0.6);
+            color: #fff;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 700;
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.18);
+        }
+
+        .admin-alert.visivel {
+            display: block;
+        }
+
         @keyframes float {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-10px); }
@@ -138,6 +171,25 @@
             padding: 20px;
             flex: 1;
             flex-wrap: wrap;
+        }
+
+        .loading-games,
+        .empty-games,
+        .error-games {
+            width: min(720px, 92vw);
+            padding: 28px;
+            border-radius: 18px;
+            text-align: center;
+            background: rgba(5, 5, 16, 0.75);
+            border: 1px solid rgba(255,255,255,0.18);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.55);
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+
+        .error-games {
+            border-color: rgba(255, 59, 59, 0.5);
+            color: #ffd0d0;
         }
 
         .game-card {
@@ -271,6 +323,45 @@
             transform: none;
         }
 
+        .btn-maintenance-admin {
+            background: linear-gradient(135deg, #ffcc00, #ff7b00);
+            color: #1a0d00;
+            box-shadow: 0 4px 15px rgba(255, 204, 0, 0.35);
+        }
+
+        .tag-status,
+        .tag-admin {
+            position: absolute;
+            z-index: 3;
+            text-shadow: none;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .tag-status {
+            top: 14px;
+            left: 14px;
+            color: #050510;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.28);
+        }
+
+        .tag-status.maintenance { background: var(--warning); }
+        .tag-status.coming_soon { background: #b8b8c8; }
+        .tag-status.hidden { background: var(--danger); color: #fff; }
+
+        .tag-admin {
+            top: 44px;
+            left: 14px;
+            background: rgba(0,230,118,0.92);
+            color: #001b0d;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 10px;
+        }
+
         .tag-novo {
             position: absolute;
             top: 14px;
@@ -309,6 +400,13 @@
                 font-size: 13px;
             }
 
+            .btn-admin-panel {
+                width: auto;
+                order: 0;
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+
             .btn-download-store {
                 width: 100%; /* Botão baixar app ocupando a tela toda */
                 order: 2; /* Fica embaixo */
@@ -337,6 +435,9 @@
         const SUPABASE_ANON_KEY = 'sb_publishable_vrLE53cxmdwVvFlamnv_xg_Ff2tuUya';
         const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        let usuarioAtual = null;
+        let adminAtual = false;
+
         function salvarSessaoUniStore(session) {
             if (!session) return;
 
@@ -348,15 +449,42 @@
             localStorage.setItem('fogwar_user', JSON.stringify(session.user));
         }
 
+        async function verificarAdmin(email) {
+            if (!email) return false;
+
+            const emailLimpo = String(email).trim().toLowerCase();
+
+            const { data, error } = await sb
+                .from('uni_admins')
+                .select('email')
+                .eq('email', emailLimpo)
+                .maybeSingle();
+
+            if (error) {
+                console.warn('Erro ao verificar admin:', error.message);
+                return false;
+            }
+
+            return !!data;
+        }
+
         async function blindagemLoja() {
             const { data, error } = await sb.auth.getSession();
             
             if (error || !data.session) {
                 window.location.replace('login.html'); 
-            } else {
-                salvarSessaoUniStore(data.session);
-                document.body.classList.add('autorizado');
+                return;
             }
+
+            salvarSessaoUniStore(data.session);
+            usuarioAtual = data.session.user;
+            adminAtual = await verificarAdmin(usuarioAtual.email);
+
+            localStorage.setItem('uni_is_admin', adminAtual ? 'true' : 'false');
+            localStorage.setItem('fogwar_is_admin', adminAtual ? 'true' : 'false');
+
+            document.body.classList.add('autorizado');
+            await carregarJogos();
         }
 
         blindagemLoja();
@@ -369,8 +497,10 @@
             if (event === 'SIGNED_OUT' || !session) {
                 localStorage.removeItem('uni_session');
                 localStorage.removeItem('uni_user');
+                localStorage.removeItem('uni_is_admin');
                 localStorage.removeItem('fogwar_session');
                 localStorage.removeItem('fogwar_user');
+                localStorage.removeItem('fogwar_is_admin');
                 window.location.replace('login.html');
             }
         });
@@ -378,9 +508,179 @@
         async function fazerLogout() {
             localStorage.removeItem('uni_session');
             localStorage.removeItem('uni_user');
+            localStorage.removeItem('uni_is_admin');
             localStorage.removeItem('fogwar_session');
             localStorage.removeItem('fogwar_user');
+            localStorage.removeItem('fogwar_is_admin');
             await sb.auth.signOut();
+        }
+
+        function abrirAdminPanel() {
+            alert('Painel Admin entra na próxima fase. Por enquanto os jogos já vêm da tabela uni_games.');
+        }
+
+        function normalizarStatus(status) {
+            const valor = String(status || 'maintenance').trim().toLowerCase();
+            if (['available', 'maintenance', 'coming_soon', 'hidden'].includes(valor)) return valor;
+            return 'maintenance';
+        }
+
+        function escapeHtml(texto) {
+            return String(texto ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function imagemDoJogo(jogo) {
+            const slug = jogo.slug || '';
+            let img = jogo.image_url || '';
+
+            // Compatibilidade com seu arquivo atual da Batalha Naval.
+            if (slug === 'batalha-naval' && (!img || img === 'bg-batalha.jpg')) {
+                img = 'BT.png';
+            }
+
+            if (!img) {
+                const mapa = {
+                    'kaboom': 'bg-kaboom.jpg',
+                    'fog-war': 'bg-fogwar.jpg',
+                    'projeto-kiran': 'bg-kiran.jpg',
+                    'batalha-naval': 'BT.png'
+                };
+                img = mapa[slug] || 'fundo_loja.png';
+            }
+
+            return img;
+        }
+
+        function iconeDoJogo(slug) {
+            const mapa = {
+                'kaboom': '👑',
+                'fog-war': '🎯',
+                'projeto-kiran': '⭐',
+                'batalha-naval': '🚢'
+            };
+            return mapa[slug] || '🎮';
+        }
+
+        function classeBotao(slug) {
+            if (slug === 'fog-war') return 'btn-play-fogwar';
+            return 'btn-play';
+        }
+
+        function textoStatus(status) {
+            const mapa = {
+                available: 'DISPONÍVEL',
+                maintenance: 'MANUTENÇÃO',
+                coming_soon: 'EM BREVE',
+                hidden: 'OCULTO'
+            };
+            return mapa[status] || 'MANUTENÇÃO';
+        }
+
+        function renderizarBotaoJogo(jogo, status) {
+            const url = jogo.game_url || '#';
+
+            if (status === 'available') {
+                return `<a href="${escapeHtml(url)}" class="btn-game ${classeBotao(jogo.slug)}">▶ Jogar</a>`;
+            }
+
+            if (status === 'maintenance') {
+                if (adminAtual) {
+                    return `<a href="${escapeHtml(url)}" class="btn-game btn-maintenance-admin">🛠 Testar como Admin</a>`;
+                }
+                return `<button class="btn-game btn-disabled" disabled>🛠 Em Manutenção</button>`;
+            }
+
+            if (status === 'coming_soon') {
+                return `<button class="btn-game btn-disabled" disabled>Em Breve</button>`;
+            }
+
+            if (status === 'hidden') {
+                if (adminAtual) {
+                    return `<button class="btn-game btn-disabled" disabled>Oculto na Loja</button>`;
+                }
+                return '';
+            }
+
+            return `<button class="btn-game btn-disabled" disabled>Indisponível</button>`;
+        }
+
+        function renderizarCard(jogo) {
+            const status = normalizarStatus(jogo.status);
+            const img = imagemDoJogo(jogo);
+            const slug = jogo.slug || 'game';
+
+            if (status === 'hidden' && !adminAtual) return '';
+
+            const tagNovo = jogo.is_new
+                ? `<span class="tag-novo">NOVO</span>`
+                : '';
+
+            const tagStatus = status !== 'available'
+                ? `<span class="tag-status ${status}">${textoStatus(status)}</span>`
+                : '';
+
+            const tagAdmin = adminAtual && status !== 'available'
+                ? `<span class="tag-admin">ADMIN VÊ</span>`
+                : '';
+
+            return `
+                <div class="game-card card-${escapeHtml(slug)}" data-slug="${escapeHtml(slug)}">
+                    ${tagStatus}
+                    ${tagAdmin}
+                    ${tagNovo}
+                    <div class="card-bg" style="background: linear-gradient(to bottom, rgba(5,5,15,0.1) 0%, rgba(5,5,15,0.95) 100%), url('${escapeHtml(img)}');"></div>
+                    <div class="card-icon">${iconeDoJogo(slug)}</div>
+                    
+                    <h3 class="game-title">${escapeHtml(jogo.title)}</h3>
+                    <p class="game-desc">${escapeHtml(jogo.description)}</p>
+                    
+                    ${renderizarBotaoJogo(jogo, status)}
+                </div>
+            `;
+        }
+
+        async function carregarJogos() {
+            const container = document.getElementById('gamesContainer');
+            const adminAlert = document.getElementById('adminAlert');
+            const btnAdmin = document.getElementById('btnAdminPanel');
+
+            if (adminAtual) {
+                if (adminAlert) adminAlert.classList.add('visivel');
+                if (btnAdmin) btnAdmin.classList.add('visivel');
+            }
+
+            container.innerHTML = `<div class="loading-games">Carregando jogos da Uni Store...</div>`;
+
+            const { data: jogos, error } = await sb
+                .from('uni_games')
+                .select('slug,title,description,image_url,game_url,status,is_new,sort_order')
+                .order('sort_order', { ascending: true });
+
+            if (error) {
+                console.error('Erro ao carregar jogos:', error);
+                container.innerHTML = `
+                    <div class="error-games">
+                        Erro ao carregar jogos do Supabase.<br>
+                        Verifique se a tabela <strong>uni_games</strong> existe e se as policies estão liberadas.
+                    </div>
+                `;
+                return;
+            }
+
+            const html = (jogos || [])
+                .map(renderizarCard)
+                .join('');
+
+            container.innerHTML = html || `
+                <div class="empty-games">
+                    Nenhum jogo visível na loja agora.
+                </div>
+            `;
         }
     </script>
 
@@ -388,6 +688,10 @@
         <a href="downloads/Uni Store.apk" download class="btn-download-store">
             📱 Baixar App Uni Store
         </a>
+
+        <button class="btn-admin-panel" id="btnAdminPanel" onclick="abrirAdminPanel()">
+            🛠 Painel Admin
+        </button>
 
         <button class="btn-logout" onclick="fazerLogout()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -404,57 +708,12 @@
         <img src="titulo.png" alt="Uni Store" class="store-title-img">
     </header>
 
-    <div class="showcase-container">
-        
-        <div class="game-card card-kaboom">
-            <div class="card-bg bg-kaboom"></div>
-            <div class="card-icon">👑</div>
-            
-            <h3 class="game-title">KABOOM 💣</h3>
-            <p class="game-desc">Ação explosiva. Desvie e sobreviva!</p>
-            
-            <a href="games/kaboom/index.html" class="btn-game btn-play" id="btn-play-kaboom">
-                ▶ Jogar
-            </a>
-        </div>
+    <div class="admin-alert" id="adminAlert">
+        🛠 Modo administrador ativo. Jogos em manutenção ficam liberados apenas para você testar.
+    </div>
 
-        <div class="game-card card-fogwar">
-            <span class="tag-novo">NOVO</span>
-            <div class="card-bg bg-fogwar"></div>
-            <div class="card-icon">🎯</div>
-            
-            <h3 class="game-title">FOG WAR 🌫️</h3>
-            <p class="game-desc">Arena tática top-down. Quebre paredes, cace inimigos na névoa.</p>
-            
-            <a href="games/fogwar/index.html" class="btn-game btn-play-fogwar" style="text-decoration: none;">
-                ▶ Jogar
-            </a>
-        </div>
-
-        <div class="game-card card-kiran">
-            <div class="card-bg bg-kiran"></div>
-            <div class="card-icon">⭐</div>
-            
-            <h3 class="game-title">Projeto Kiran ⚡</h3>
-            <p class="game-desc">Em desenvolvimento. Prepare-se para o raio animado.</p>
-            
-            <button class="btn-game btn-disabled">
-                Em Breve
-            </button>
-        </div>
-
-        <div class="game-card card-naval">
-            <div class="card-bg bg-naval"></div>
-            <div class="card-icon">🚢</div>
-            
-            <h3 class="game-title">Batalha Naval ⚓</h3>
-            <p class="game-desc">Estratégia e combate em alto mar. Afunde a frota inimiga!</p>
-            
-            <button class="btn-game btn-disabled">
-                Em Breve
-            </button>
-        </div>
-
+    <div class="showcase-container" id="gamesContainer">
+        <div class="loading-games">Carregando jogos da Uni Store...</div>
     </div>
 
 <script>
