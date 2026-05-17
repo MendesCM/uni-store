@@ -941,9 +941,11 @@ function openSettings(){
   const fx = document.getElementById('settingsSfx');
   const joy = document.getElementById('settingsJoySensitivity');
   const pname = document.getElementById('settingsPlayerName');
+  const lang = document.getElementById('settingsLanguage');
   if(m) m.checked = !!OPT.music;
   if(fx) fx.checked = !!OPT.sfx;
   if(pname) pname.value = OPT.playerName || 'Mendes';
+  if(lang) lang.value = OPT.language || 'pt-BR';
   if(joy) joy.value = Math.round((OPT.joystickSensitivity || 1) * 100);
   updateJoySensitivityLabel();
   if(modal) modal.classList.add('active');
@@ -965,11 +967,13 @@ function applySettings(){
   const fx = document.getElementById('settingsSfx');
   const joy = document.getElementById('settingsJoySensitivity');
   const pname = document.getElementById('settingsPlayerName');
+  const lang = document.getElementById('settingsLanguage');
   OPT.music = m ? m.checked : OPT.music;
   OPT.sfx = fx ? fx.checked : OPT.sfx;
   OPT.playerName = pname ? String(pname.value || 'Mendes').trim().slice(0,16) : OPT.playerName;
   if(!OPT.playerName) OPT.playerName = 'Mendes';
   MENDES_NAME = OPT.playerName;
+  OPT.language = lang ? String(lang.value || 'pt-BR') : (OPT.language || 'pt-BR');
   OPT.joystickSensitivity = joy ? (parseInt(joy.value, 10) / 100) : OPT.joystickSensitivity;
   saveSettings();
   if(!OPT.music) musicStop();
@@ -982,6 +986,7 @@ function resetSettingsDefaults(){
   OPT.sfx = true;
   OPT.playerName = 'Mendes';
   MENDES_NAME = OPT.playerName;
+  OPT.language = lang ? String(lang.value || 'pt-BR') : (OPT.language || 'pt-BR');
   OPT.joystickSensitivity = 1;
   saveSettings();
   openSettings();
@@ -998,7 +1003,7 @@ const CV = document.getElementById('game');
 const CTX = CV.getContext('2d');
 let W = 0, H = 0, DPR = 1;
 
-let MENDES_NAME = (OPT && OPT.playerName) ? OPT.playerName : 'Mendes'; // Seu nick
+let MENDES_NAME = 'Mendes'; // Seu nick
 let mySessionId = Math.random().toString(36).substring(2, 9);
 let currentRoomId = null;
 let spectatorMode = false;
@@ -1011,7 +1016,7 @@ let lobbyState = {
 
 /* ===== Screens ===== */
 const SCREENS = { 
-  menu:'screenMenu', howTo:'screenHowTo', about:'screenAbout',
+  menu:'screenMenu', howTo:'screenHowTo', about:'screenAbout', allies:'screenAllies',
   charSelect:'screenChar', playMode:'screenPlayMode', 
   lobbyLocal:'screenLobbyLocal', multiOptions:'screenMultiOptions', 
   multiLobby:'screenMultiLobby' 
@@ -1132,19 +1137,21 @@ function musicStop(){
 }
 function musicTension(v){ MUSIC.target = Math.max(0, Math.min(1, v)); }
 
-const OPT = { music:true, sfx:true, joystickSensitivity:1, playerName:'Mendes' };
+const OPT = { music:true, sfx:true, joystickSensitivity:1, playerName:'Mendes', language:'pt-BR' };
 function loadSettings(){
   const saved = JSON.parse(localStorage.getItem('fogwar_settings') || '{}');
   if(typeof saved.music === 'boolean') OPT.music = saved.music;
   if(typeof saved.sfx === 'boolean') OPT.sfx = saved.sfx;
   if(typeof saved.playerName === 'string' && saved.playerName.trim()) OPT.playerName = saved.playerName.trim().slice(0,16);
+  if(typeof saved.language === 'string' && saved.language.trim()) OPT.language = saved.language.trim();
   if(typeof saved.joystickSensitivity === 'number') OPT.joystickSensitivity = Math.max(0.5, Math.min(1.6, saved.joystickSensitivity));
 }
 function saveSettings(){
-  localStorage.setItem('fogwar_settings', JSON.stringify({ music:OPT.music, sfx:OPT.sfx, joystickSensitivity:OPT.joystickSensitivity, playerName:OPT.playerName }));
+  localStorage.setItem('fogwar_settings', JSON.stringify({ music:OPT.music, sfx:OPT.sfx, joystickSensitivity:OPT.joystickSensitivity, playerName:OPT.playerName, language:OPT.language }));
 }
 loadSettings();
-console.log('FOG WAR v4.4 carregado: performance, anti-flood e cleanup ativos.');
+MENDES_NAME = OPT.playerName || 'Mendes';
+console.log('FOG WAR v4.6.6 carregado: correção OPT/SCREENS ativa.');
 
 /* ===== Characters ===== */
 const CHARS = [
