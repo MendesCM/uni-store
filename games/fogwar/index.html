@@ -271,6 +271,7 @@
     <div class="row" style="flex-direction:column">
       <button class="btn primary" onclick="goto('charSelect')">▶ JOGAR</button>
       <button class="btn" onclick="goto('howTo')">COMO JOGAR</button>
+      <button class="btn" onclick="goto('allies')">ALIADOS</button>
       <button class="btn" onclick="goto('about')">SOBRE</button>
       <div class="menu-action-row">
         <button class="top-menu-btn" onclick="openSettings()" title="Configurações">⚙ CONFIG</button>
@@ -318,7 +319,7 @@
     <div class="logo" style="font-size:48px">SOBRE</div>
     <div class="panel" style="max-width:560px">
       <div style="font-size:13px;line-height:1.7;color:var(--text)">
-        <b style="color:var(--accent)">Fog War</b> é um jogo tático top-down com mecânica de visão limitada (fog of war persistente) e destruição de paredes. Nasça isolado, abra caminho com suas armas e cace seus inimigos.<br><br>
+        <b style="color:var(--accent)">Fog War</b> é um jogo tático top-down com mecânica de visão limitada (fog of war persistente) e destruição de paredes. Nasça isolado, abra caminho com suas armas e cace seus inimigos.<br><br><b style="color:var(--accent2)">Criado e desenvolvido por Antonio Mendes.</b><br><br>
         <b style="color:var(--accent2)">Fase 1.5 ✓</b> Radar funcional, modo paisagem forçado e sistema de munição.<br>
         <b style="color:var(--good)">Fase 3.0 ✓</b> Sistema de Lobby UI e Modo Bots funcionando offline!<br>
       </div>
@@ -419,6 +420,9 @@
       <div class="form-row checkbox-wrap" style="justify-content:center; margin-top:15px">
         <label><input type="checkbox" id="multiPrivate" onchange="togglePrivatePasswordUI()"> Sala Privada (código + senha)</label>
       </div>
+      <div class="form-row checkbox-wrap" style="justify-content:center; margin-top:8px">
+        <label><input type="checkbox" id="roomFriendlyFire"> Fogo amigo ligado</label>
+      </div>
       <div id="createPasswordArea" class="password-area">
         <input type="password" id="multiPassword" placeholder="SENHA DA SALA PRIVADA" style="width:100%; text-align:center; letter-spacing:2px;">
       </div>
@@ -459,6 +463,31 @@
       <button class="btn" id="btnToggleReady" style="border-color:var(--gold); color:var(--gold); display:none;" onclick="toggleReady()">ESTOU PRONTO</button>
       <button class="btn primary" id="btnStartMulti" style="display:none;" onclick="requestStartGame()">INICIAR PARTIDA ▶</button>
     </div>
+  </div>
+
+
+  <div class="screen" id="screenAllies">
+    <div class="logo" style="font-size:48px">ALIADOS</div>
+    <div class="panel" style="max-width:760px">
+      <div class="panel-title">💬 CHAT DE COMUNICAÇÃO</div>
+      <div class="row" style="margin-bottom:10px">
+        <button class="btn small primary" id="chatTabGlobal" onclick="setAllianceChatTab('global')">GLOBAL</button>
+        <button class="btn small" id="chatTabAlly" onclick="setAllianceChatTab('ally')">ALIADOS</button>
+        <button class="btn small" id="chatTabPrivate" onclick="setAllianceChatTab('private')">PRIVADO</button>
+      </div>
+      <div id="alliancePrivateArea" style="display:none;margin-bottom:10px">
+        <select id="alliancePrivateTarget" style="width:100%"></select>
+      </div>
+      <div id="allianceChatBox" style="height:260px;overflow-y:auto;background:#0a0d12;border:1px solid var(--border);padding:10px;text-align:left;font-size:12px;line-height:1.5;margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="allianceChatInput" placeholder="Digite sua mensagem..." maxlength="180" style="flex:1" onkeypress="if(event.key==='Enter') sendAllianceChat()">
+        <button class="btn small primary" onclick="sendAllianceChat()">ENVIAR</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5">
+        Global: todos da sala podem ler. Aliados: aparece para seu time. Privado: escolha uma pessoa da sala.
+      </div>
+    </div>
+    <button class="btn" onclick="goto('menu')">VOLTAR</button>
   </div>
 
   <div id="hud">
@@ -512,6 +541,16 @@
       <label class="settings-row"><span>🎵 Música dinâmica</span><input type="checkbox" id="settingsMusic" checked></label>
       <label class="settings-row"><span>🔊 Efeitos sonoros</span><input type="checkbox" id="settingsSfx" checked></label>
       <div class="settings-row" style="flex-direction:column;align-items:stretch">
+        <div style="display:flex;justify-content:space-between;gap:10px;width:100%"><span>👤 Meu nome no jogo</span></div>
+        <input type="text" id="settingsPlayerName" maxlength="16" placeholder="Seu nome" style="width:100%;height:auto;min-width:0;text-align:center;letter-spacing:1px">
+      </div>
+      <div class="settings-row" style="flex-direction:column;align-items:stretch">
+        <div style="display:flex;justify-content:space-between;gap:10px;width:100%"><span>🌎 Idioma</span></div>
+        <select id="settingsLanguage" style="width:100%;min-width:0;text-align:center">
+          <option value="pt-BR">Português-BR</option>
+        </select>
+      </div>
+      <div class="settings-row" style="flex-direction:column;align-items:stretch">
         <div style="display:flex;justify-content:space-between;gap:10px;width:100%"><span>🕹 Sensibilidade do joystick</span><span class="range-value" id="joySensitivityValue">100%</span></div>
         <div class="range-wrap"><input type="range" id="settingsJoySensitivity" min="50" max="160" value="100" step="5" oninput="updateJoySensitivityLabel()"></div>
       </div>
@@ -524,6 +563,26 @@
   <div id="spectatorBadge" class="spectator-badge">MODO ESPECTADOR</div>
   <div id="netBadge" class="net-badge">ONLINE NETCODE v4.6.1</div>
   <div id="tipToast"></div>
+
+  <button id="inGameGearBtn" class="top-menu-btn" onclick="openInGameMenu()" title="Menu da partida" style="position:absolute;top:12px;right:12px;z-index:9000;display:none;pointer-events:auto">⚙</button>
+  <div id="inGameMenuModal" style="position:absolute;inset:0;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;z-index:9997;padding:20px">
+    <div class="settings-box">
+      <div class="settings-title">MENU DA PARTIDA</div>
+      <button class="btn danger" onclick="askReturnToMenu()">VOLTAR PARA O MENU</button>
+      <button class="btn" onclick="closeInGameMenu()">CONTINUAR JOGANDO</button>
+    </div>
+  </div>
+  <div id="returnConfirmModal" style="position:absolute;inset:0;background:rgba(0,0,0,.84);display:none;align-items:center;justify-content:center;z-index:9998;padding:20px">
+    <div class="settings-box">
+      <div class="settings-title" id="returnConfirmTitle">TEM CERTEZA?</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:14px" id="returnConfirmText">Você quer sair da partida e voltar para o menu?</div>
+      <div class="row">
+        <button class="btn danger" onclick="confirmReturnToMenuStep()">SIM</button>
+        <button class="btn" onclick="cancelReturnToMenu()">NÃO</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -694,6 +753,9 @@ function getUserId(){
   return currentSupabaseUser ? currentSupabaseUser.id : mySessionId;
 }
 function getUserName(){
+  const nomeConfig = (typeof OPT !== 'undefined' && OPT.playerName) ? String(OPT.playerName).trim() : '';
+  if(nomeConfig) return nomeConfig.slice(0,16);
+
   const email = currentSupabaseUser && currentSupabaseUser.email ? currentSupabaseUser.email.split('@')[0] : 'Jogador';
   return email || MENDES_NAME || 'Jogador';
 }
@@ -878,8 +940,10 @@ function openSettings(){
   const m = document.getElementById('settingsMusic');
   const fx = document.getElementById('settingsSfx');
   const joy = document.getElementById('settingsJoySensitivity');
+  const pname = document.getElementById('settingsPlayerName');
   if(m) m.checked = !!OPT.music;
   if(fx) fx.checked = !!OPT.sfx;
+  if(pname) pname.value = OPT.playerName || 'Mendes';
   if(joy) joy.value = Math.round((OPT.joystickSensitivity || 1) * 100);
   updateJoySensitivityLabel();
   if(modal) modal.classList.add('active');
@@ -900,8 +964,12 @@ function applySettings(){
   const m = document.getElementById('settingsMusic');
   const fx = document.getElementById('settingsSfx');
   const joy = document.getElementById('settingsJoySensitivity');
+  const pname = document.getElementById('settingsPlayerName');
   OPT.music = m ? m.checked : OPT.music;
   OPT.sfx = fx ? fx.checked : OPT.sfx;
+  OPT.playerName = pname ? String(pname.value || 'Mendes').trim().slice(0,16) : OPT.playerName;
+  if(!OPT.playerName) OPT.playerName = 'Mendes';
+  MENDES_NAME = OPT.playerName;
   OPT.joystickSensitivity = joy ? (parseInt(joy.value, 10) / 100) : OPT.joystickSensitivity;
   saveSettings();
   if(!OPT.music) musicStop();
@@ -912,6 +980,8 @@ function applySettings(){
 function resetSettingsDefaults(){
   OPT.music = true;
   OPT.sfx = true;
+  OPT.playerName = 'Mendes';
+  MENDES_NAME = OPT.playerName;
   OPT.joystickSensitivity = 1;
   saveSettings();
   openSettings();
@@ -928,7 +998,7 @@ const CV = document.getElementById('game');
 const CTX = CV.getContext('2d');
 let W = 0, H = 0, DPR = 1;
 
-let MENDES_NAME = "Mendes"; // Seu nick
+let MENDES_NAME = (OPT && OPT.playerName) ? OPT.playerName : 'Mendes'; // Seu nick
 let mySessionId = Math.random().toString(36).substring(2, 9);
 let currentRoomId = null;
 let spectatorMode = false;
@@ -1062,15 +1132,16 @@ function musicStop(){
 }
 function musicTension(v){ MUSIC.target = Math.max(0, Math.min(1, v)); }
 
-const OPT = { music:true, sfx:true, joystickSensitivity:1 };
+const OPT = { music:true, sfx:true, joystickSensitivity:1, playerName:'Mendes' };
 function loadSettings(){
   const saved = JSON.parse(localStorage.getItem('fogwar_settings') || '{}');
   if(typeof saved.music === 'boolean') OPT.music = saved.music;
   if(typeof saved.sfx === 'boolean') OPT.sfx = saved.sfx;
+  if(typeof saved.playerName === 'string' && saved.playerName.trim()) OPT.playerName = saved.playerName.trim().slice(0,16);
   if(typeof saved.joystickSensitivity === 'number') OPT.joystickSensitivity = Math.max(0.5, Math.min(1.6, saved.joystickSensitivity));
 }
 function saveSettings(){
-  localStorage.setItem('fogwar_settings', JSON.stringify({ music:OPT.music, sfx:OPT.sfx, joystickSensitivity:OPT.joystickSensitivity }));
+  localStorage.setItem('fogwar_settings', JSON.stringify({ music:OPT.music, sfx:OPT.sfx, joystickSensitivity:OPT.joystickSensitivity, playerName:OPT.playerName }));
 }
 loadSettings();
 console.log('FOG WAR v4.4 carregado: performance, anti-flood e cleanup ativos.');
@@ -1878,7 +1949,14 @@ function processNetworkEvent(ev){
   }
   if(ev.type === 'shoot'){
     const shotId = payload.shotId || eventKey;
-    if(!rememberLimitedSet('processedShots', shotId, 320, 160)) return;
+
+    // CORREÇÃO v4.6.3:
+    // Antes o código marcava o tiro como processado aqui e depois spawnBullet()
+    // tentava marcar de novo. Resultado: o tiro remoto era descartado e o outro
+    // jogador não via o projétil. Agora só checamos duplicidade aqui; quem registra
+    // o ID é o spawnBullet().
+    if(NETWORK.processedShots && NETWORK.processedShots.has(shotId)) return;
+
     NETWORK.suppressEvent = true;
     const lagMs = payload.sentAt ? Math.max(0, Math.min(180, Date.now() - Number(payload.sentAt))) : 0;
     spawnBullet(p, Number(payload.angle || p.angle), { remote:true, shotId, x:payload.x, y:payload.y, latencyMs:lagMs });
@@ -2458,16 +2536,113 @@ function tryDash(p){
   for(let i=0;i<8;i++){ GAME.particles.push({x:p.x,y:p.y,vx:(Math.random()-0.5)*60,vy:(Math.random()-0.5)*60,life:0.3,maxLife:0.3,color:p.color,size:3}); }
 }
 
-const JOY = { active:false, baseX:0, baseY:0, dx:0, dy:0 };
-const joyBase = document.getElementById('joystickBase'); const joyStick = document.getElementById('joystickStick');
-function handleJoyStart(e){ e.preventDefault(); const t = e.touches ? e.touches[0] : e; const r = joyBase.getBoundingClientRect(); JOY.active = true; JOY.baseX = r.left + r.width/2; JOY.baseY = r.top + r.height/2; JOY.dx = (t.clientX - JOY.baseX)/(r.width/2); JOY.dy = (t.clientY - JOY.baseY)/(r.height/2); const mag = Math.hypot(JOY.dx, JOY.dy); if(mag>1){ JOY.dx/=mag; JOY.dy/=mag; } joyStick.style.transform = `translate(calc(-50% + ${JOY.dx*40}px), calc(-50% + ${JOY.dy*40}px))`; }
-function handleJoyMove(e){ if(!JOY.active) return; e.preventDefault(); const t = e.touches ? e.touches[0] : e; JOY.dx = (t.clientX - JOY.baseX)/(joyBase.getBoundingClientRect().width/2); JOY.dy = (t.clientY - JOY.baseY)/(joyBase.getBoundingClientRect().height/2); const mag = Math.hypot(JOY.dx, JOY.dy); if(mag>1){ JOY.dx/=mag; JOY.dy/=mag; } joyStick.style.transform = `translate(calc(-50% + ${JOY.dx*40}px), calc(-50% + ${JOY.dy*40}px))`; }
-function handleJoyEnd(e){ JOY.active = false; JOY.dx = JOY.dy = 0; joyStick.style.transform = 'translate(-50%,-50%)'; }
-joyBase.addEventListener('touchstart', handleJoyStart, {passive:false}); joyBase.addEventListener('touchmove', handleJoyMove, {passive:false}); joyBase.addEventListener('touchend', handleJoyEnd); joyBase.addEventListener('touchcancel', handleJoyEnd);
+const JOY = { active:false, baseX:0, baseY:0, dx:0, dy:0, touchId:null };
+const joyBase = document.getElementById('joystickBase'); 
+const joyStick = document.getElementById('joystickStick');
 
-const btnAttack = document.getElementById('btnAttack'); btnAttack.addEventListener('touchstart', e=>{ e.preventDefault(); INPUT.attackHeld = true; audioInit(); if(AC&&AC.state==='suspended') AC.resume(); }, {passive:false}); btnAttack.addEventListener('touchend', e=>{ INPUT.attackHeld = false; }); btnAttack.addEventListener('touchcancel', e=>{ INPUT.attackHeld = false; }); btnAttack.addEventListener('pointerleave', e=>{ INPUT.attackHeld = false; });
-const btnDash = document.getElementById('btnDash'); btnDash.addEventListener('touchstart', e=>{ e.preventDefault(); tryDash(GAME.players[0]); }, {passive:false});
-const btnReload = document.getElementById('btnReload'); if (btnReload) { btnReload.addEventListener('touchstart', e=>{ e.preventDefault(); tryReload(GAME.players[0]); }, {passive:false}); }
+function getTouchById(touches, id){
+  if(!touches) return null;
+  for(let i=0;i<touches.length;i++){
+    if(touches[i].identifier === id) return touches[i];
+  }
+  return null;
+}
+
+function updateJoyFromTouch(t){
+  if(!t || !joyBase) return;
+  const r = joyBase.getBoundingClientRect();
+  JOY.baseX = r.left + r.width/2;
+  JOY.baseY = r.top + r.height/2;
+  JOY.dx = (t.clientX - JOY.baseX)/(r.width/2);
+  JOY.dy = (t.clientY - JOY.baseY)/(r.height/2);
+  const mag = Math.hypot(JOY.dx, JOY.dy);
+  if(mag>1){ JOY.dx/=mag; JOY.dy/=mag; }
+  if(joyStick) joyStick.style.transform = `translate(calc(-50% + ${JOY.dx*40}px), calc(-50% + ${JOY.dy*40}px))`;
+}
+
+function handleJoyStart(e){
+  e.preventDefault();
+  e.stopPropagation();
+  const t = e.changedTouches ? e.changedTouches[0] : (e.touches ? e.touches[0] : e);
+  if(!t) return;
+  JOY.active = true;
+  JOY.touchId = t.identifier ?? 'mouse';
+  updateJoyFromTouch(t);
+}
+
+function handleJoyMove(e){
+  if(!JOY.active) return;
+  const t = e.changedTouches 
+    ? getTouchById(e.changedTouches, JOY.touchId) 
+    : (e.touches ? getTouchById(e.touches, JOY.touchId) : e);
+  if(!t) return;
+  e.preventDefault();
+  e.stopPropagation();
+  updateJoyFromTouch(t);
+}
+
+function handleJoyEnd(e){
+  const ended = e.changedTouches 
+    ? getTouchById(e.changedTouches, JOY.touchId) 
+    : e;
+  if(!ended) return;
+  e.preventDefault();
+  e.stopPropagation();
+  JOY.active = false;
+  JOY.touchId = null;
+  JOY.dx = JOY.dy = 0;
+  if(joyStick) joyStick.style.transform = 'translate(-50%,-50%)';
+}
+
+if(joyBase){
+  joyBase.addEventListener('touchstart', handleJoyStart, {passive:false});
+  joyBase.addEventListener('touchmove', handleJoyMove, {passive:false});
+  joyBase.addEventListener('touchend', handleJoyEnd, {passive:false});
+  joyBase.addEventListener('touchcancel', handleJoyEnd, {passive:false});
+}
+
+function bindMobileButton(id, onDown, onUp){
+  const el = document.getElementById(id);
+  if(!el) return;
+  let activeId = null;
+
+  el.addEventListener('touchstart', e=>{
+    e.preventDefault();
+    e.stopPropagation();
+    const t = e.changedTouches ? e.changedTouches[0] : null;
+    activeId = t ? t.identifier : 'touch';
+    onDown && onDown(e);
+  }, {passive:false});
+
+  const end = e=>{
+    const t = e.changedTouches ? getTouchById(e.changedTouches, activeId) : true;
+    if(!t) return;
+    e.preventDefault();
+    e.stopPropagation();
+    activeId = null;
+    onUp && onUp(e);
+  };
+
+  el.addEventListener('touchend', end, {passive:false});
+  el.addEventListener('touchcancel', end, {passive:false});
+}
+
+bindMobileButton('btnAttack', ()=>{
+  INPUT.attackHeld = true;
+  audioInit();
+  if(AC&&AC.state==='suspended') AC.resume();
+}, ()=>{
+  INPUT.attackHeld = false;
+});
+
+bindMobileButton('btnDash', ()=>{
+  tryDash(GAME.players[0]);
+});
+
+bindMobileButton('btnReload', ()=>{
+  tryReload(GAME.players[0]);
+});
+
 
 function tryMove(p, nx, ny){
   const r = p.r; let testX = nx;
@@ -2768,8 +2943,14 @@ function update(dt){
       const sp = me.speed * (me.passives.includes('pSpeed') ? 1.25 : 1); const nx = me.x + mx*sp*dt; const ny = me.y + my*sp*dt; tryMove(me, nx, ny); me.vx = mx*sp; me.vy = my*sp;
     }
     if(INPUT.attackHeld && me.attackCd<=0 && !me.isReloading){
-      if(me.ammo > 0) { spawnBullet(me, me.angle); me.attackCd = me.def.weapon.cd * (me.passives.includes('pCd') ? 0.75 : 1); me.ammo--; if(me.ammo === 0) tryReload(me); } 
-      else { tryReload(me); }
+      if(me.ammo > 0) { 
+        spawnBullet(me, me.angle); 
+        me.attackCd = me.def.weapon.cd * (me.passives.includes('pCd') ? 0.75 : 1); 
+        me.ammo--; 
+        if(me.ammo === 0) spawnFloat(me, 'SEM MUNIÇÃO - REC!', '#ffcc00');
+      } else { 
+        spawnFloat(me, 'APERTE REC!', '#ffcc00');
+      }
     }
   } else if(spectatorMode && !me.alive){
     let mx=0, my=0;
@@ -2800,7 +2981,7 @@ function update(dt){
     if(!kill){
       for(const p of GAME.players){
         if(!p.alive || p.id===b.owner) continue;
-        if(GAME.mode==='2v2' && p.team===b.team) continue;
+        if(!canApplyDamageToTarget(p, b.team, b.owner)) continue;
         const d = Math.hypot(p.x-b.x, p.y-b.y);
         if(d < p.r + 4){
           if(b.remote){
@@ -2837,7 +3018,7 @@ function update(dt){
     if(m.life<=0){ GAME.mines.splice(i,1); continue; }
     if(m.armed<=0){
       for(const p of GAME.players){
-        if(!p.alive) continue; if(p.team===m.team) continue;
+        if(!p.alive) continue; if(!canApplyDamageToTarget(p, m.team, m.owner)) continue;
         if(Math.hypot(p.x-m.x, p.y-m.y) < 24){ spawnExplosion(m.x,m.y,70,m.dmg,m.team,m.owner); GAME.mines.splice(i,1); break; }
       }
     }
@@ -2889,7 +3070,7 @@ function spawnExplosion(x,y,r,dmg,team,ownerId){
     if(Math.hypot(cx-x,cy-y) < r && tileAt(tx,ty)!==T.WALL) damageWall(tx,ty,80);
   }
   for(const p of GAME.players){
-    if(!p.alive) continue; if(GAME.mode==='2v2' && p.team===team && p.id!==ownerId) continue;
+    if(!p.alive) continue; if(!canApplyDamageToTarget(p, team, ownerId)) continue;
     const d = Math.hypot(p.x-x, p.y-y);
     if(d < r){ const dmgFalloff = dmg * (1 - d/r*0.5); damagePlayer(p, dmgFalloff, team, ownerId); }
   }
@@ -3045,8 +3226,15 @@ function render(){
     CTX.restore(); CTX.restore();
     
     const hpw = 32, hph = 4; CTX.fillStyle = '#1a0a0a'; CTX.fillRect(p.x-hpw/2, p.y-p.r-10, hpw, hph); CTX.fillStyle = '#22c55e'; CTX.fillRect(p.x-hpw/2, p.y-p.r-10, hpw*(p.hp/p.maxHp), hph); CTX.strokeStyle = '#000'; CTX.strokeRect(p.x-hpw/2, p.y-p.r-10, hpw, hph);
-    if(p !== me){ CTX.fillStyle = '#fff'; CTX.font = 'bold 10px Courier New'; CTX.textAlign = 'center'; CTX.fillText(p.name, p.x, p.y-p.r-14); }
-    if(GAME.mode==='2v2' && p.team===me.team && p!==me){ CTX.fillStyle = '#4ade80'; CTX.font = '10px Courier New'; CTX.fillText('ALIADO', p.x, p.y+p.r+12); }
+    if(p !== me && GAME.mode==='2v2' && p.team===me.team){ 
+      CTX.fillStyle = '#fff'; 
+      CTX.font = 'bold 10px Courier New'; 
+      CTX.textAlign = 'center'; 
+      CTX.fillText(p.name || 'Aliado', p.x, p.y-p.r-14); 
+      CTX.fillStyle = '#4ade80'; 
+      CTX.font = '10px Courier New'; 
+      CTX.fillText('ALIADO', p.x, p.y+p.r+12); 
+    }
     if(isGhostSelf){
       CTX.fillStyle = 'rgba(255,255,255,0.85)';
       CTX.font = 'bold 10px Courier New';
@@ -3376,6 +3564,311 @@ setTimeout(buildCharSelect, 150);
 
   console.log('%c[FogWar] Patch aplicado com sucesso. Tente criar/entrar em sala agora.', 'color:#4ade80;font-weight:bold');
 })();
+
+/* =====================================================================
+   FOG WAR v4.6.3 — HUD FPS / LATÊNCIA
+   Mostra FPS, ping estimado, sala, realtime e quantidade de tiros ativos.
+   ===================================================================== */
+(function fogWarNetStatsHud(){
+  if (window.__fogWarNetStatsHudInstalled) return;
+  window.__fogWarNetStatsHudInstalled = true;
+
+  const hud = document.createElement('div');
+  hud.id = 'netStatsHud';
+  hud.style.cssText = [
+    'position:fixed',
+    'left:10px',
+    'bottom:10px',
+    'z-index:99999',
+    'background:rgba(5,7,10,.82)',
+    'border:1px solid rgba(59,130,246,.65)',
+    'color:#dbeafe',
+    'font-family:Courier New, monospace',
+    'font-size:11px',
+    'line-height:1.45',
+    'padding:8px 10px',
+    'border-radius:10px',
+    'box-shadow:0 0 18px rgba(59,130,246,.20)',
+    'pointer-events:none',
+    'min-width:138px',
+    'backdrop-filter:blur(6px)'
+  ].join(';');
+
+  hud.innerHTML = 'FPS --<br>Ping --ms<br>RT --<br>Sala --';
+  document.body.appendChild(hud);
+
+  let frames = 0;
+  let fps = 0;
+  let last = performance.now();
+
+  function fpsLoop(now){
+    frames++;
+    if(now - last >= 1000){
+      fps = Math.round(frames * 1000 / (now - last));
+      frames = 0;
+      last = now;
+    }
+    requestAnimationFrame(fpsLoop);
+  }
+  requestAnimationFrame(fpsLoop);
+
+  function statusColor(ok){
+    return ok ? '#4ade80' : '#ffcc00';
+  }
+
+  setInterval(() => {
+    const ping = (typeof NETWORK !== 'undefined' && NETWORK.avgLatency)
+      ? Math.round(NETWORK.avgLatency)
+      : 0;
+
+    const rt = (typeof NETWORK !== 'undefined' && NETWORK.broadcastOnline) ? 'ON' : 'OFF';
+    const sala = (typeof currentRoomId !== 'undefined' && currentRoomId) ? currentRoomId : '--';
+    const balas = (typeof GAME !== 'undefined' && GAME.bullets) ? GAME.bullets.length : 0;
+
+    hud.innerHTML =
+      `<div><b style="color:#fff">FPS</b> <span style="color:${fps >= 50 ? '#4ade80' : fps >= 30 ? '#ffcc00' : '#ff6b6b'}">${fps || '--'}</span></div>` +
+      `<div><b style="color:#fff">PING</b> <span style="color:${ping <= 120 ? '#4ade80' : ping <= 220 ? '#ffcc00' : '#ff6b6b'}">${ping || '--'}ms</span></div>` +
+      `<div><b style="color:#fff">REALTIME</b> <span style="color:${statusColor(rt === 'ON')}">${rt}</span></div>` +
+      `<div><b style="color:#fff">SALA</b> ${sala}</div>` +
+      `<div><b style="color:#fff">TIROS</b> ${balas}</div>`;
+  }, 300);
+
+  console.log('%c[FogWar] HUD de FPS/latência ativo.', 'color:#3b82f6;font-weight:bold');
+  console.log('%c[FogWar] v4.6.4 controles móveis, recarregar manual e nomes de aliados ativo.', 'color:#4ade80;font-weight:bold');
+})();
+
+
+/* =====================================================================
+   FOG WAR v4.6.5 — Fogo amigo, chat aliados/privado, idioma e menu in-game
+   ===================================================================== */
+(function fogWar465TeamChatAndSafety(){
+  if(window.__fogWar465Installed) return;
+  window.__fogWar465Installed = true;
+
+  window.FOG_ROOM_SETTINGS = window.FOG_ROOM_SETTINGS || { friendlyFire:false, language:'pt-BR' };
+  let allianceChatTab = 'global';
+  let returnConfirmStep = 0;
+
+  function currentFriendlyFire(){
+    if(typeof NETWORK !== 'undefined' && typeof NETWORK.friendlyFire === 'boolean') return NETWORK.friendlyFire;
+    return !!(window.FOG_ROOM_SETTINGS && window.FOG_ROOM_SETTINGS.friendlyFire);
+  }
+
+  window.isFriendlyFireEnabled = currentFriendlyFire;
+
+  window.canApplyDamageToTarget = function(target, attackerTeam, attackerId){
+    if(!target || !target.alive) return false;
+    const tid = String(target.userId || target.id || '');
+    const aid = String(attackerId || '');
+    if(aid && tid && tid === aid) return false; // nunca toma dano da própria arma/explosão
+    if(typeof GAME !== 'undefined' && GAME.mode === '2v2' && Number(target.team) === Number(attackerTeam) && !currentFriendlyFire()) return false;
+    return true;
+  };
+
+  if(typeof damagePlayer === 'function'){
+    const oldDamagePlayer465 = damagePlayer;
+    damagePlayer = function patchedDamagePlayer465(p, dmg, byTeam, attackerId, opts={}){
+      if(!window.canApplyDamageToTarget(p, byTeam, attackerId)) return;
+      return oldDamagePlayer465(p, dmg, byTeam, attackerId, opts);
+    };
+  }
+
+  if(typeof SCREENS !== 'undefined') SCREENS.allies = 'screenAllies';
+
+  function applyRoomSettingsFromSeed(room){
+    const seed = String((room && room.match_seed) || (typeof NETWORK !== 'undefined' ? NETWORK.seed : '') || '');
+    const ff = seed.includes('_FF1');
+    window.FOG_ROOM_SETTINGS.friendlyFire = ff;
+    if(typeof NETWORK !== 'undefined') NETWORK.friendlyFire = ff;
+  }
+
+  if(typeof startOnlineMatchFromLobby === 'function'){
+    const oldStartOnline465 = startOnlineMatchFromLobby;
+    startOnlineMatchFromLobby = async function patchedStartOnlineMatchFromLobby465(room){
+      applyRoomSettingsFromSeed(room || currentRoom || {});
+      return await oldStartOnline465(room);
+    };
+  }
+
+  if(typeof requestStartGame === 'function'){
+    requestStartGame = async function patchedRequestStartGame465() {
+      if(!SB || !currentRoomId) return;
+      if(!(await requireOnlineAuth())) return;
+      if (getUserId() !== lobbyState.hostId) { showTip('Somente o HOST pode iniciar.'); return; }
+      await loadRoomPlayers();
+      const layout = getModeLayout(lobbyState.mode);
+      const players = Object.values(lobbyState.players);
+      const occupied = layout.filter(chair => players.some(p => p.chair === chair));
+      const ready = players.filter(p => p.chair && p.isReady);
+      if(occupied.length !== layout.length){ showTip('Todas as cadeiras precisam estar ocupadas.'); return; }
+      if(ready.length !== layout.length){ showTip('Todos precisam confirmar PRONTO.'); return; }
+      const ff = !!document.getElementById('roomFriendlyFire')?.checked;
+      window.FOG_ROOM_SETTINGS.friendlyFire = ff;
+      if(typeof NETWORK !== 'undefined') NETWORK.friendlyFire = ff;
+      const seed = currentRoomId + '_' + Date.now() + (ff ? '_FF1' : '_FF0');
+      const { error } = await SB.from('fog_rooms').update({
+        status:'starting', match_seed:seed, map_size:'medium', chest_count:5, updated_at:new Date().toISOString()
+      }).eq('code', currentRoomId);
+      if(error){ console.error(error); showTip('Erro ao iniciar partida. Rode o SQL v4.6.'); return; }
+      await loadCurrentRoomMeta();
+      showTip(ff ? 'Iniciando com FOGO AMIGO ligado...' : 'Iniciando sem fogo amigo...', 1800);
+      setTimeout(() => startOnlineMatchFromLobby(currentRoom), 600);
+    };
+  }
+
+  const oldOpenSettings465 = typeof openSettings === 'function' ? openSettings : null;
+  openSettings = function patchedOpenSettings465(){
+    if(oldOpenSettings465) oldOpenSettings465();
+    const lang = document.getElementById('settingsLanguage');
+    if(lang) lang.value = OPT.language || 'pt-BR';
+  };
+
+  const oldApplySettings465 = typeof applySettings === 'function' ? applySettings : null;
+  applySettings = function patchedApplySettings465(){
+    const lang = document.getElementById('settingsLanguage');
+    if(lang) OPT.language = lang.value || 'pt-BR';
+    if(oldApplySettings465) oldApplySettings465();
+    OPT.language = (document.getElementById('settingsLanguage')?.value || 'pt-BR');
+    localStorage.setItem('fogwar_settings', JSON.stringify({ music:OPT.music, sfx:OPT.sfx, joystickSensitivity:OPT.joystickSensitivity, playerName:OPT.playerName, language:OPT.language }));
+  };
+
+  const saved = JSON.parse(localStorage.getItem('fogwar_settings') || '{}');
+  OPT.language = saved.language || 'pt-BR';
+
+  window.setAllianceChatTab = function(tab){
+    allianceChatTab = tab || 'global';
+    const privateArea = document.getElementById('alliancePrivateArea');
+    if(privateArea) privateArea.style.display = allianceChatTab === 'private' ? 'block' : 'none';
+    for(const [id,t] of [['chatTabGlobal','global'],['chatTabAlly','ally'],['chatTabPrivate','private']]){
+      const b = document.getElementById(id);
+      if(b){ b.classList.toggle('primary', t === allianceChatTab); }
+    }
+    renderAllianceChat();
+  };
+
+  function fillPrivateTargets(){
+    const sel = document.getElementById('alliancePrivateTarget');
+    if(!sel) return;
+    sel.innerHTML = '';
+    const myId = typeof getUserId === 'function' ? getUserId() : '';
+    const players = (typeof lobbyState !== 'undefined' && lobbyState.players) ? Object.values(lobbyState.players) : [];
+    for(const p of players){
+      if(p.userId === myId) continue;
+      const opt = document.createElement('option');
+      opt.value = p.userId;
+      opt.textContent = p.name || 'Jogador';
+      sel.appendChild(opt);
+    }
+    if(!sel.children.length){
+      const opt = document.createElement('option'); opt.value=''; opt.textContent='Nenhum jogador na sala'; sel.appendChild(opt);
+    }
+  }
+
+  window.renderAllianceChat = async function(){
+    const box = document.getElementById('allianceChatBox');
+    if(!box) return;
+    fillPrivateTargets();
+    if(!SB || !currentRoomId){ box.innerHTML = '<span style="color:var(--muted)">Entre em uma sala para usar o chat.</span>'; return; }
+    const { data, error } = await SB.from('fog_room_messages').select('*').eq('room_code', currentRoomId).order('created_at', { ascending:true }).limit(80);
+    if(error){ box.innerHTML = '<span style="color:var(--danger)">Erro ao carregar chat.</span>'; return; }
+    const myId = getUserId();
+    const myTeam = GAME && GAME.players && GAME.players[0] ? GAME.players[0].team : null;
+    const rows = [];
+    for(const msg of data || []){
+      let text = String(msg.text || '');
+      let show = false;
+      let tag = 'GLOBAL';
+      if(text.startsWith('[ALLY:')){
+        const end = text.indexOf(']');
+        const team = text.slice(7,end);
+        text = text.slice(end+1).trim();
+        show = allianceChatTab === 'ally' && String(myTeam) === String(team);
+        tag = 'ALIADOS';
+      } else if(text.startsWith('[PRIVATE:')){
+        const end = text.indexOf(']');
+        const parts = text.slice(9,end).split(':');
+        const to = parts[0], from = parts[1] || msg.user_id;
+        text = text.slice(end+1).trim();
+        show = allianceChatTab === 'private' && (to === myId || from === myId);
+        tag = 'PRIVADO';
+      } else if(text.startsWith('[GLOBAL]')){
+        text = text.replace('[GLOBAL]','').trim();
+        show = allianceChatTab === 'global';
+      } else {
+        show = allianceChatTab === 'global';
+      }
+      if(show){
+        rows.push(`<div><b style="color:var(--accent2)">[${tag}] ${escapeHtml(msg.nickname || 'Jogador')}:</b> ${escapeHtml(text)}</div>`);
+      }
+    }
+    box.innerHTML = rows.join('') || '<span style="color:var(--muted)">Nenhuma mensagem aqui ainda.</span>';
+    box.scrollTop = box.scrollHeight;
+  };
+
+  window.sendAllianceChat = async function(){
+    if(!(await requireOnlineAuth())) return;
+    const input = document.getElementById('allianceChatInput');
+    if(!input) return;
+    let text = input.value.trim();
+    if(!text || !SB || !currentRoomId){ showTip('Entre em uma sala para enviar mensagem.'); return; }
+    if(text.length > 180) text = text.slice(0,180);
+    let encoded = '[GLOBAL] ' + text;
+    if(allianceChatTab === 'ally'){
+      const team = GAME && GAME.players && GAME.players[0] ? GAME.players[0].team : 0;
+      encoded = `[ALLY:${team}] ${text}`;
+    }
+    if(allianceChatTab === 'private'){
+      const to = document.getElementById('alliancePrivateTarget')?.value || '';
+      if(!to){ showTip('Escolha um jogador para o privado.'); return; }
+      encoded = `[PRIVATE:${to}:${getUserId()}] ${text}`;
+    }
+    await SB.from('fog_room_messages').insert({ room_code:currentRoomId, user_id:getUserId(), nickname:getUserName(), text:encoded });
+    input.value = '';
+    await renderAllianceChat();
+  };
+
+  const oldGoto465 = typeof goto === 'function' ? goto : null;
+  goto = function patchedGoto465(name){
+    if(oldGoto465) oldGoto465(name);
+    if(name === 'allies') setTimeout(renderAllianceChat, 80);
+    toggleInGameGear();
+  };
+
+  window.openInGameMenu = function(){ document.getElementById('inGameMenuModal').style.display='flex'; };
+  window.closeInGameMenu = function(){ document.getElementById('inGameMenuModal').style.display='none'; };
+  window.askReturnToMenu = function(){
+    returnConfirmStep = 1;
+    closeInGameMenu();
+    document.getElementById('returnConfirmTitle').textContent = 'SAIR DA PARTIDA?';
+    document.getElementById('returnConfirmText').textContent = 'Você quer voltar para o menu?';
+    document.getElementById('returnConfirmModal').style.display='flex';
+  };
+  window.cancelReturnToMenu = function(){ returnConfirmStep = 0; document.getElementById('returnConfirmModal').style.display='none'; };
+  window.confirmReturnToMenuStep = function(){
+    if(returnConfirmStep === 1){
+      returnConfirmStep = 2;
+      document.getElementById('returnConfirmTitle').textContent = 'TEM CERTEZA MESMO?';
+      document.getElementById('returnConfirmText').textContent = 'A partida atual será abandonada e você voltará para o menu.';
+      return;
+    }
+    if(typeof stopNetworkSync === 'function') stopNetworkSync(true);
+    document.getElementById('returnConfirmModal').style.display='none';
+    document.getElementById('hud')?.classList.remove('active');
+    document.getElementById('mobileControls')?.classList.remove('active');
+    if(typeof GAME !== 'undefined') GAME.state = 'menu';
+    goto('menu');
+  };
+
+  function toggleInGameGear(){
+    const btn = document.getElementById('inGameGearBtn');
+    if(!btn || typeof GAME === 'undefined') return;
+    btn.style.display = GAME.state === 'playing' || GAME.state === 'roundEnd' ? 'flex' : 'none';
+  }
+  setInterval(toggleInGameGear, 500);
+
+  console.log('%c[FogWar] v4.6.5 fogo amigo/chat/idioma/menu ativo.', 'color:#4ade80;font-weight:bold');
+})();
+
 </script>
 </body>
 </html>
