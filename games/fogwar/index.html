@@ -3186,6 +3186,195 @@ function loop(t){
 requestAnimationFrame(loop);
 
 setTimeout(buildCharSelect, 150);
+
+/* =====================================================================
+   FOG WAR — MULTIPLAYER FIX v1.0
+   Cole ESTE BLOCO INTEIRO antes do `</script>` final do seu fog_war.html
+   (a última linha visível do seu arquivo é "requestAnimationFrame(loop);"
+   seguida de "setTimeout(buildCharSelect, 150);" — cole logo depois disso).
+
+   Este patch corrige:
+   1. Broadcast realtime que nunca disparava (movimentos não chegavam aos amigos).
+   2. State push pro DB que quase nunca acontecia.
+   3. Exigência de login Uni Store que travava convidados.
+   4. RPC fog_join_room_check quebrando o "Entrar com código" sem fallback.
+   ===================================================================== */
+
+(function fogWarMultiplayerFix(){
+  console.log('%c[FogWar] Aplicando patch multiplayer v1.0...', 'color:#ff6b35;font-weight:bold');
+
+  /* ---------- FIX 1: variáveis ausentes em NETWORK ---------- */
+  if (typeof NETWORK === 'undefined') {
+    console.error('[FogWar] NETWORK não encontrado. Cole o patch DENTRO do <script> do jogo.');
+    return;
+  }
+  // Habilita o caminho rápido via WebSocket broadcast (era a causa nº1 do desync).
+  NETWORK.useBroadcast = true;
+  NETWORK.broadcastOnline = false;          // vira true quando o channel SUBSCRIBE confirma
+  NETWORK.lastDbStatePush = 0;
+  NETWORK.dbStatePushInterval = 180;        // ms — backup via banco
+  NETWORK.lastDbSnapshot = null;
+
+  /* ---------- FIX 2: modo CONVIDADO automático ----------
+     O jogo original exigia sessão Uni Store. Se o amigo abrir direto
+     no link/APK sem login, ficava travado. Agora cria um ID convidado
+     local persistente e libera o multiplayer. */
+  const _origRequireAuth = window.requireOnlineAuth;
+  window.requireOnlineAuth = async function patchedRequireOnlineAuth(){
+    if (typeof loadSupabaseUser === 'function') await loadSupabaseUser();
+    if (currentSupabaseUser) return true;
+
+    // Cria convidado persistente
+    let guestId = localStorage.getItem('fogwar_guest_id');
+    if (!guestId) {
+      // UUID-like (não precisa ser real UUID para nossa lógica)
+      guestId = 'g_' + Math.random().toString(36).slice(2,10) + Math.random().toString(36).slice(2,10);
+      localStorage.setItem('fogwar_guest_id', guestId);
+    }
+    let guestName = localStorage.getItem('fogwar_guest_name');
+    if (!guestName) {
+      guestName = (window.MENDES_NAME && window.MENDES_NAME !== 'Mendes')
+        ? window.MENDES_NAME
+        : 'Jogador-' + guestId.slice(-4).toUpperCase();
+      localStorage.setItem('fogwar_guest_name', guestName);
+    }
+    currentSupabaseUser = {
+      id: guestId,
+      email: guestName + '@guest.fogwar',
+      isGuest: true
+    };
+    console.log('[FogWar] Modo convidado ativo:', guestName, guestId);
+    return true;
+  };
+
+  /* getUserId e getUserName já leem currentSupabaseUser, então funcionam
+     direto com o convidado. Só ajustamos getUserName pra não cortar o "@guest" feio. */
+  const _origGetUserName = window.getUserName;
+  window.getUserName = function patchedGetUserName(){
+    if (currentSupabaseUser && currentSupabaseUser.isGuest) {
+      const stored = localStorage.getItem('fogwar_guest_name');
+      if (stored) return stored;
+    }
+    return _origGetUserName ? _origGetUserName() : 'Jogador';
+  };
+
+  /* ---------- FIX 3: fallback de joinMultiplayerRoom ----------
+     Se o RPC SQL fog_join_room_check não existir, faz query direta na tabela. */
+  window.joinMultiplayerRoom = async function patchedJoinMultiplayerRoom(){
+    if(!SB){ showTip('Supabase não carregou. Verifique a internet.'); return; }
+    if(!(await requireOnlineAuth())) return;
+
+    const codeEl = document.getElementById('joinCode');
+    const code = (codeEl && codeEl.value || '').trim().toUpperCase();
+    const passEl = document.getElementById('joinPassword');
+    const password = (passEl && passEl.value || '').trim();
+    if(code.length === 0){ showTip('Digite o código da sala.'); return; }
+
+    let room = null;
+
+    // Tenta o RPC primeiro (verifica senha do lado do servidor)
+    try {
+      const { data, error } = await SB
+        .rpc('fog_join_room_check', { p_code: code, p_password: password })
+        .maybeSingle();
+      if (!error && data) {
+        room = data;
+      } else if (error) {
+        const msg = String(error.message || '');
+        if (msg.includes('SENHA_INCORRETA')) {
+          showTip('Senha incorreta.');
+          return;
+        }
+        console.warn('[FogWar] RPC fog_join_room_check indisponível, usando fallback:', msg);
+      }
+    } catch (e) {
+      console.warn('[FogWar] RPC fog_join_room_check exceção, usando fallback:', e.message || e);
+    }
+
+    // Fallback: query direta + validação local de senha
+    if (!room) {
+      const direct = await SB.from('fog_rooms')
+        .select('id,code,host_user_id,mode,is_private,password,status,created_at,updated_at,match_seed,map_size,chest_count')
+        .eq('code', code)
+        .maybeSingle();
+      if (direct.error) {
+        console.error(direct.error);
+        showTip('Erro ao buscar sala. Verifique se as tabelas SQL foram criadas.');
+        return;
+      }
+      if (!direct.data) { showTip('Sala não encontrada.'); return; }
+      if (direct.data.is_private && direct.data.password && direct.data.password !== password) {
+        showTip('Senha incorreta.');
+        return;
+      }
+      if (direct.data.status === 'closed') {
+        showTip('Essa sala foi encerrada.');
+        return;
+      }
+      // Remove o campo password antes de armazenar (ele não vem do RPC)
+      const safe = Object.assign({}, direct.data);
+      delete safe.password;
+      room = safe;
+    }
+
+    const userId = getUserId();
+    const userName = getUserName();
+    currentRoom = room;
+    currentRoomId = room.code;
+    lobbyState.mode = room.mode;
+    lobbyState.hostId = room.host_user_id;
+
+    const { error: upsertErr } = await SB.from('fog_room_players').upsert({
+      room_code: currentRoomId,
+      user_id: userId,
+      nickname: userName,
+      char: GAME.selectedChar,
+      chair: null,
+      is_ready: false,
+      is_host: userId === room.host_user_id,
+      last_seen: new Date().toISOString()
+    }, { onConflict: 'room_code,user_id' });
+
+    if (upsertErr) {
+      console.error('[FogWar] Erro ao entrar na fog_room_players:', upsertErr);
+      showTip('Erro ao entrar na sala. Verifique RLS/SQL.');
+      return;
+    }
+
+    goto('multiLobby');
+    document.getElementById('lobbyCodeDisplay').innerText = currentRoomId;
+    await enterRoomRealtime(currentRoomId);
+    showTip('Você entrou na sala ' + currentRoomId, 2500);
+  };
+
+  /* ---------- FIX 4: enterRoomRealtime — confirmar broadcastOnline ----------
+     O subscribe original já seta broadcastOnline, mas vamos garantir
+     log + reconnect amigável. */
+  const _origEnter = window.enterRoomRealtime;
+  window.enterRoomRealtime = async function patchedEnterRoomRealtime(code){
+    NETWORK.broadcastOnline = false;
+    if (_origEnter) {
+      await _origEnter(code);
+    }
+    // Diagnóstico após 2s
+    setTimeout(() => {
+      if (NETWORK.broadcastOnline) {
+        console.log('%c[FogWar] ✅ Broadcast realtime CONECTADO. Multiplayer rápido ativo.', 'color:#4ade80');
+      } else {
+        console.warn('[FogWar] ⚠️ Broadcast realtime não confirmou. Verifique se Realtime está habilitado no Supabase.');
+        showTip('Conectando ao realtime...', 1800);
+      }
+    }, 2000);
+  };
+
+  /* ---------- FIX 5: diagnóstico inicial ---------- */
+  if (!SB) {
+    console.error('[FogWar] Cliente Supabase não inicializou. CDN bloqueada?');
+  } else {
+    console.log('[FogWar] Supabase pronto. URL:', SUPABASE_URL);
+  }
+
+  console.log('%c[FogWar] Patch aplicado com sucesso. Tente criar/entrar em sala agora.', 'color:#4ade80;font-weight:bold');
 </script>
 </body>
 </html>
